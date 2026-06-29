@@ -8,23 +8,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
-
-	"golang.org/x/time/rate"
 
 	"github.com/a68366/pfix-cli/internal/cmdutil"
-	"github.com/a68366/pfix-cli/internal/planfix"
 )
-
-func fakeCreateClient(srvURL string) func() (*planfix.Client, error) {
-	return func() (*planfix.Client, error) {
-		c := planfix.New("example.test", "tok")
-		c.BaseURL = srvURL
-		c.Limiter = rate.NewLimiter(rate.Inf, 1)
-		c.Backoff = func(int) time.Duration { return 0 }
-		return c, nil
-	}
-}
 
 func TestRunCreateDefault(t *testing.T) {
 	var gotMethod, gotPath string
@@ -42,7 +28,7 @@ func TestRunCreateDefault(t *testing.T) {
 	o := &createOptions{
 		name:        "New task",
 		description: "A description",
-		client:      fakeCreateClient(srv.URL),
+		client:      fakeClient(srv.URL),
 		out:         out,
 	}
 	if err := runCreate(context.Background(), o); err != nil {
@@ -76,7 +62,7 @@ func TestRunCreateQuiet(t *testing.T) {
 	o := &createOptions{
 		name:   "Task",
 		quiet:  true,
-		client: fakeCreateClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCreate(context.Background(), o); err != nil {
@@ -98,7 +84,7 @@ func TestRunCreateJSON(t *testing.T) {
 	o := &createOptions{
 		name:   "Task",
 		json:   true,
-		client: fakeCreateClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCreate(context.Background(), o); err != nil {
@@ -128,7 +114,7 @@ func TestRunCreateNoDescription(t *testing.T) {
 	out := &strings.Builder{}
 	o := &createOptions{
 		name:   "Only name",
-		client: fakeCreateClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCreate(context.Background(), o); err != nil {

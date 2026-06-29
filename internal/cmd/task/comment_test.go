@@ -8,24 +8,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
-
-	"golang.org/x/time/rate"
 
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 	"github.com/a68366/pfix-cli/internal/output"
-	"github.com/a68366/pfix-cli/internal/planfix"
 )
-
-func fakeCommentClient(srvURL string) func() (*planfix.Client, error) {
-	return func() (*planfix.Client, error) {
-		c := planfix.New("example.test", "tok")
-		c.BaseURL = srvURL
-		c.Limiter = rate.NewLimiter(rate.Inf, 1)
-		c.Backoff = func(int) time.Duration { return 0 }
-		return c, nil
-	}
-}
 
 // --- comment list tests ---
 
@@ -48,7 +34,7 @@ func TestRunCommentListDefaultTable(t *testing.T) {
 		id:     15,
 		limit:  5,
 		offset: 0,
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCommentList(context.Background(), o); err != nil {
@@ -104,7 +90,7 @@ func TestRunCommentListLongCommentTruncated(t *testing.T) {
 		id:     15,
 		limit:  100,
 		offset: 0,
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCommentList(context.Background(), o); err != nil {
@@ -139,7 +125,7 @@ func TestRunCommentListNewlinesCollapsed(t *testing.T) {
 		id:     15,
 		limit:  100,
 		offset: 0,
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCommentList(context.Background(), o); err != nil {
@@ -175,7 +161,7 @@ func TestRunCommentListLongMultilineComment(t *testing.T) {
 		id:     15,
 		limit:  100,
 		offset: 0,
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCommentList(context.Background(), o); err != nil {
@@ -207,7 +193,7 @@ func TestRunCommentListJSON(t *testing.T) {
 		limit:  100,
 		offset: 0,
 		json:   true,
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCommentList(context.Background(), o); err != nil {
@@ -233,7 +219,7 @@ func TestRunCommentListQuiet(t *testing.T) {
 		id:     15,
 		limit:  100,
 		quiet:  true,
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCommentList(context.Background(), o); err != nil {
@@ -262,7 +248,7 @@ func TestRunCommentListOffset(t *testing.T) {
 		id:     15,
 		limit:  10,
 		offset: 20,
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runCommentList(context.Background(), o); err != nil {
@@ -294,7 +280,7 @@ func TestRunCommentAddDefault(t *testing.T) {
 	o := &commentAddOptions{
 		id:     15,
 		body:   "Hi",
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 		// Non-empty stdin: --body must take priority and stdin must be ignored.
 		in: strings.NewReader("unexpected stdin content"),
@@ -327,7 +313,7 @@ func TestRunCommentAddQuiet(t *testing.T) {
 		id:     15,
 		body:   "Hi",
 		quiet:  true,
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 		in:     strings.NewReader(""),
 	}
@@ -351,7 +337,7 @@ func TestRunCommentAddJSON(t *testing.T) {
 		id:     15,
 		body:   "Hi",
 		json:   true,
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 		in:     strings.NewReader(""),
 	}
@@ -383,7 +369,7 @@ func TestRunCommentAddStdin(t *testing.T) {
 	o := &commentAddOptions{
 		id:     15,
 		body:   "", // empty — should fall through to stdin
-		client: fakeCommentClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 		in:     strings.NewReader("from stdin\n"),
 	}
@@ -419,7 +405,7 @@ func TestRunCommentAddEmptyBodyAndStdin(t *testing.T) {
 			o := &commentAddOptions{
 				id:     15,
 				body:   "",
-				client: fakeCommentClient(srv.URL),
+				client: fakeClient(srv.URL),
 				out:    out,
 				in:     strings.NewReader(tt.stdin),
 			}

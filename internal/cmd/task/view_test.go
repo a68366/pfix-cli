@@ -7,22 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
-
-	"golang.org/x/time/rate"
-
-	"github.com/a68366/pfix-cli/internal/planfix"
 )
-
-func fakeViewClient(srvURL string) func() (*planfix.Client, error) {
-	return func() (*planfix.Client, error) {
-		c := planfix.New("example.test", "tok")
-		c.BaseURL = srvURL
-		c.Limiter = rate.NewLimiter(rate.Inf, 1)
-		c.Backoff = func(int) time.Duration { return 0 }
-		return c, nil
-	}
-}
 
 func TestRunViewDefaultDetail(t *testing.T) {
 	var gotPath string
@@ -34,7 +19,7 @@ func TestRunViewDefaultDetail(t *testing.T) {
 
 	out := &strings.Builder{}
 	o := &viewOptions{
-		client: fakeViewClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runView(context.Background(), o, "15"); err != nil {
@@ -67,7 +52,7 @@ func TestRunViewJSON(t *testing.T) {
 	out := &strings.Builder{}
 	o := &viewOptions{
 		json:   true,
-		client: fakeViewClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runView(context.Background(), o, "15"); err != nil {
@@ -93,7 +78,7 @@ func TestRunViewNonNumericID(t *testing.T) {
 
 	out := &strings.Builder{}
 	o := &viewOptions{
-		client: fakeViewClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	err := runView(context.Background(), o, "abc")
@@ -119,7 +104,7 @@ func TestRunViewCustomFields(t *testing.T) {
 	out := &strings.Builder{}
 	o := &viewOptions{
 		fields: "id,name",
-		client: fakeViewClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runView(context.Background(), o, "15"); err != nil {

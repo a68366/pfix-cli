@@ -58,7 +58,10 @@ func columnsFor(fields, def string, defCols []output.Column) []output.Column {
 }
 
 func jsonUnmarshal(b []byte, v any) error {
-	return json.Unmarshal(b, v)
+	if err := json.Unmarshal(b, v); err != nil {
+		return fmt.Errorf("decode response: %w", err)
+	}
+	return nil
 }
 
 // validateID parses a string task ID and returns an informative error on failure.

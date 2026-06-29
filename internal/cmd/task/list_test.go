@@ -7,22 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
-
-	"golang.org/x/time/rate"
-
-	"github.com/a68366/pfix-cli/internal/planfix"
 )
-
-func fakeListClient(srvURL string) func() (*planfix.Client, error) {
-	return func() (*planfix.Client, error) {
-		c := planfix.New("example.test", "tok")
-		c.BaseURL = srvURL
-		c.Limiter = rate.NewLimiter(rate.Inf, 1)
-		c.Backoff = func(int) time.Duration { return 0 }
-		return c, nil
-	}
-}
 
 func TestRunListDefaultTable(t *testing.T) {
 	var gotMethod, gotBody string
@@ -38,7 +23,7 @@ func TestRunListDefaultTable(t *testing.T) {
 	o := &listOptions{
 		limit:  100,
 		offset: 0,
-		client: fakeListClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runList(context.Background(), o); err != nil {
@@ -79,7 +64,7 @@ func TestRunListJSON(t *testing.T) {
 		limit:  100,
 		offset: 0,
 		json:   true,
-		client: fakeListClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runList(context.Background(), o); err != nil {
@@ -107,7 +92,7 @@ func TestRunListCustomLimit(t *testing.T) {
 	o := &listOptions{
 		limit:  25,
 		offset: 0,
-		client: fakeListClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runList(context.Background(), o); err != nil {
@@ -128,7 +113,7 @@ func TestRunListQuiet(t *testing.T) {
 	o := &listOptions{
 		limit:  100,
 		quiet:  true,
-		client: fakeListClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runList(context.Background(), o); err != nil {

@@ -8,23 +8,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
-
-	"golang.org/x/time/rate"
 
 	"github.com/a68366/pfix-cli/internal/cmdutil"
-	"github.com/a68366/pfix-cli/internal/planfix"
 )
-
-func fakeUpdateClient(srvURL string) func() (*planfix.Client, error) {
-	return func() (*planfix.Client, error) {
-		c := planfix.New("example.test", "tok")
-		c.BaseURL = srvURL
-		c.Limiter = rate.NewLimiter(rate.Inf, 1)
-		c.Backoff = func(int) time.Duration { return 0 }
-		return c, nil
-	}
-}
 
 func TestRunUpdateStatus(t *testing.T) {
 	var gotMethod, gotPath string
@@ -42,7 +28,7 @@ func TestRunUpdateStatus(t *testing.T) {
 	o := &updateOptions{
 		id:     15,
 		body:   map[string]any{"status": map[string]any{"id": 2}},
-		client: fakeUpdateClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runUpdate(context.Background(), o); err != nil {
@@ -79,7 +65,7 @@ func TestRunUpdateNameAndDescription(t *testing.T) {
 	o := &updateOptions{
 		id:     20,
 		body:   map[string]any{"name": "Updated", "description": "Details"},
-		client: fakeUpdateClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runUpdate(context.Background(), o); err != nil {
@@ -104,7 +90,7 @@ func TestRunUpdateQuiet(t *testing.T) {
 		id:     15,
 		quiet:  true,
 		body:   map[string]any{"name": "Q"},
-		client: fakeUpdateClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runUpdate(context.Background(), o); err != nil {
@@ -127,7 +113,7 @@ func TestRunUpdateJSON(t *testing.T) {
 		id:     15,
 		json:   true,
 		body:   map[string]any{"name": "J"},
-		client: fakeUpdateClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	if err := runUpdate(context.Background(), o); err != nil {
@@ -154,7 +140,7 @@ func TestRunUpdateNoFields(t *testing.T) {
 	o := &updateOptions{
 		id:     15,
 		body:   map[string]any{},
-		client: fakeUpdateClient(srv.URL),
+		client: fakeClient(srv.URL),
 		out:    out,
 	}
 	err := runUpdate(context.Background(), o)
