@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/a68366/pfix-cli/internal/cmd/auth"
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 )
 
@@ -25,7 +26,7 @@ func NewRootCmd() *cobra.Command {
 	pf.BoolVarP(&g.Quiet, "quiet", "q", false, "Suppress non-essential output")
 
 	root.AddCommand(newVersionCmd())
-	// auth and api subcommands are registered in Tasks 4 and 5 using g.
+	root.AddCommand(auth.NewCmd(g))
 
 	return root
 }
