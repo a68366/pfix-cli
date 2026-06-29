@@ -2,7 +2,11 @@ pfix is a public, open-source command-line client for the Planfix REST API, writ
 
 ## Status
 
-Milestone 1 is implemented and merged to `main`: the config/profile layer, the Planfix transport client, `auth` (login/status/logout), and the raw `api` passthrough — all tested. Still to come: the typed resource commands (`task`, then `project`/`comment`) and the human-readable table output layer. Keep this file in sync as code lands.
+Milestones 1–2 are implemented and merged to `main`:
+- **M1:** the config/profile layer, the Planfix transport client, `auth` (login/status/logout), and the raw `api` passthrough.
+- **M2:** the typed `task` command group (`list`, `view`, `create`, `update`, `comment list`, `comment add`) and the `internal/output` rendering layer (table/detail/raw-JSON) that makes `--json`/`--fields`/`--quiet` meaningful.
+
+All tested. Still to come: `project` and the remaining resources. Keep this file in sync as code lands.
 
 ## Project rules
 
@@ -21,28 +25,28 @@ Milestone 1 is implemented and merged to `main`: the config/profile layer, the P
 
 Implemented:
 - `main.go` — thin entry point (`cmd.Execute`).
-- `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`.
+- `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`, `task/` (`list`, `view`, `create`, `update`, and the `comment` sub-group).
 - `internal/cmdutil/` — `GlobalOpts` (persistent flags) and the `Client()` helper that builds a configured client from the active profile.
-- `internal/planfix/` — Planfix REST client. A single low-level `Client.Do(ctx, method, path, body, headers)` carries auth, throttling, and retries; the raw `api` command and the future typed commands all go through it. `errors.go` holds `APIError`/`ParseError`.
+- `internal/planfix/` — Planfix REST client. A low-level `Client.Do(ctx, method, path, body, headers)` carries auth, throttling, and retries; `Client.JSON(ctx, method, path, body)` is the typed-command convenience over it (marshals the body, returns raw response bytes, maps status ≥300 to `*APIError`). `errors.go` holds `APIError` (incl. the Planfix app `Code`)/`ParseError`.
+- `internal/output/` — renders decoded JSON: `Table`/`Detail` via `text/tabwriter`, a dot-path `Flatten` (e.g. `status.name`), rune-safe `Truncate`, and `JSON` (pretty-print/raw passthrough — shared with `api`).
 - `internal/config/` — profile load/save (atomic, mode 0600) and value precedence (`Resolve`, `ResolveProfileName`).
 - `internal/buildinfo/` — version/commit/date injected at build time.
 
 Planned (not yet present):
-- `internal/cmd/task/` (+ `comment`), `internal/cmd/project/`, `internal/cmd/config/`.
-- `internal/output/` — table rendering; the `--json` flag becomes meaningful once typed commands have a non-JSON default.
+- `internal/cmd/project/`, `internal/cmd/config/`.
 
 ## Build order
 
 1. **Done (M1):** `auth` + generic `api` — credentials/profiles plus the raw passthrough make every endpoint reachable immediately.
-2. **Next (M2):** `task` — list, view, create, update, and comments.
-3. `project`, then the remaining resources.
+2. **Done (M2):** `task` — list, view, create, update, and comments + the `internal/output` rendering layer.
+3. **Next (M3):** `project`, then the remaining resources.
 
 ## Conventions
 
 - Auth: Bearer token + account domain; base URL `https://<domain>/rest/...`.
 - Config file: `~/.config/pfix/config.yml` (mode 0600) with multiple named profiles.
 - Precedence: command-line flags > environment (`PFIX_DOMAIN`, `PFIX_TOKEN`, `PFIX_PROFILE`, `PFIX_CONFIG`) > config file. Profile name resolves through `config.ResolveProfileName` (`flag > PFIX_PROFILE > current_profile > "default"`) — use it everywhere a command needs the active profile, so the commands stay consistent.
-- Output: `--json` will emit the API response unmodified (raw passthrough); typed commands will default to a human-readable table. Today `api` always emits raw JSON, pretty-printed via stdlib `json.Indent` (no color). Errors go to stderr with a non-zero exit code.
+- Output: typed `task` commands default to a human-readable table (list) or key/value detail (single object), rendered by `internal/output` (stdlib `text/tabwriter`, no color). `--json` emits the API response unmodified (pretty-printed); `--fields` overrides the requested fields and table columns; `-q/--quiet` drops the header row (lists) or prints only the affected id (create/update/comment add). `api` always emits raw JSON. Errors go to stderr with a non-zero exit code. The Planfix layer stays thin — commands render generically from decoded `map[string]any` via dot-paths rather than typed structs, so unconfirmed nested shapes need no model.
 - Transport: `Client.Do` returns the HTTP response for any status (callers inspect `StatusCode` and use `planfix.ParseError` for detail). It retries connection errors + 5xx, never 4xx.
 - API specifics: list endpoints are POST with `pageSize`/`offset`/`fields`/`filters`; fields must be requested explicitly — ship sensible per-resource defaults, overridable with `--fields`.
 

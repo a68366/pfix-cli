@@ -2,7 +2,7 @@
 
 A command-line client for the [Planfix](https://planfix.com) REST API, written in Go. It ships as a single self-contained binary and is built for two audiences: people working in a terminal, and automation or AI agents that consume machine-readable output.
 
-> **Status: early development.** Credential management (`auth`) and a raw, authenticated request passthrough (`api`) are implemented. Typed resource commands (`task`, `project`) and human-readable table output are on the [roadmap](#roadmap).
+> **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), and the typed `task` commands (with human-readable table output) are implemented. Further typed resources (`project`, …) are on the [roadmap](#roadmap).
 
 ## Install
 
@@ -48,6 +48,50 @@ pfix api task/1
 ```
 
 ## Usage
+
+Typed commands print a human-readable table (or a key/value detail block for a
+single item) by default. Three global flags shape the output of every typed
+command:
+
+| Flag | Effect |
+|---|---|
+| `--json` | Emit the raw Planfix API response (pretty-printed) instead of a table — the machine-readable path |
+| `--fields a,b,c` | Override which Planfix fields are requested and shown as columns (defaults are per-command) |
+| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`/`comment add`) |
+
+### Tasks
+
+```sh
+# List tasks (table). --limit / --offset page the results.
+pfix task list
+pfix task list --limit 20 --offset 20
+pfix task list --fields id,name,status      # choose your own columns
+pfix task list --json                       # raw API response
+
+# View one task (detail block, or --json for everything)
+pfix task view 17
+pfix task view 17 --json
+
+# Create a task (--name required); prints the new id
+pfix task create --name "Deploy release" --description "ship it"
+pfix task create --name "Quick task" -q     # prints just the id
+
+# Update a task — pass any of --name/--description/--status (status id)
+pfix task update 17 --status 2
+pfix task update 17 --name "Renamed" --description "new body"
+
+# Comments
+pfix task comment list 17
+pfix task comment add 17 --body "Looks good"
+echo "comment from stdin" | pfix task comment add 17
+```
+
+Notes:
+- A task's **description** is its first comment in Planfix — it shows up in
+  `comment list` as well as in `view`.
+- `--status` takes a numeric status id (see a task's current status via
+  `pfix task view <id> --json`). Field names for `--fields` are Planfix REST
+  field names; unknown names are silently ignored by the API.
 
 ### Raw API passthrough
 
@@ -100,8 +144,8 @@ Choose a profile per command with `--profile staging` or `PFIX_PROFILE=staging`.
 
 ## Roadmap
 
-- Typed `task` commands (list / view / create / update, plus comments), then `project`.
-- Human-readable table output — the current `api` output is raw JSON; `--json` selects raw output once typed commands ship.
+- Typed `project` commands, then the remaining Planfix resources.
+- Richer `task list` filtering (currently use `api` with a POST body for arbitrary filters).
 - Multi-platform release binaries.
 
 ## Development
