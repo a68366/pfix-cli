@@ -1,0 +1,20 @@
+# Build output
+/dist/
+/bin/
+/pfix
+*.exe
+*.test
+
+# Coverage & profiling
+*.out
+*.prof
+coverage.*
+
+# Editor / IDE / agent tooling
+.idea/
+.vscode/
+.claude/
+
+# OS
+.DS_Store
+*.swp
