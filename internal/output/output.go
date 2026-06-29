@@ -117,6 +117,24 @@ func JSON(w io.Writer, raw []byte) error {
 	return nil
 }
 
+// ColumnsFor returns defCols when fields equals def (the rich, explicit-path
+// defaults), otherwise derives one column per comma-separated field name
+// (UPPER header, bare field as path).
+func ColumnsFor(fields, def string, defCols []Column) []Column {
+	if fields == def {
+		return defCols
+	}
+	var cols []Column
+	for _, f := range strings.Split(fields, ",") {
+		f = strings.TrimSpace(f)
+		if f == "" {
+			continue
+		}
+		cols = append(cols, Column{Header: strings.ToUpper(f), Path: f})
+	}
+	return cols
+}
+
 // Truncate shortens s to max runes, appending an ellipsis when cut.
 func Truncate(s string, max int) string {
 	r := []rune(s)

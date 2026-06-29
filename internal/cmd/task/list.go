@@ -40,7 +40,7 @@ func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			o.json = g.JSON
 			o.fields = g.Fields
 			o.quiet = g.Quiet
-			o.client = clientFunc(g)
+			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runList(cmd.Context(), o)
 		},
@@ -51,7 +51,7 @@ func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 }
 
 func runList(ctx context.Context, o *listOptions) error {
-	fields := fieldsCSV(o.fields, listDefaultFields)
+	fields := cmdutil.FieldsCSV(o.fields, listDefaultFields)
 	body := map[string]any{
 		"offset":   o.offset,
 		"pageSize": o.limit,
@@ -71,9 +71,9 @@ func runList(ctx context.Context, o *listOptions) error {
 	var env struct {
 		Tasks []map[string]any `json:"tasks"`
 	}
-	if err := jsonUnmarshal(raw, &env); err != nil {
+	if err := cmdutil.DecodeJSON(raw, &env); err != nil {
 		return err
 	}
-	output.Table(o.out, columnsFor(fields, listDefaultFields, listColumns), env.Tasks, !o.quiet)
+	output.Table(o.out, output.ColumnsFor(fields, listDefaultFields, listColumns), env.Tasks, !o.quiet)
 	return nil
 }

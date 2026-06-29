@@ -123,6 +123,42 @@ func TestDetail(t *testing.T) {
 	}
 }
 
+func TestColumnsFor(t *testing.T) {
+	defCols := []Column{
+		{Header: "ID", Path: "id"},
+		{Header: "NAME", Path: "name"},
+	}
+	const def = "id,name"
+
+	// When fields == def, should return defCols unchanged.
+	got := ColumnsFor(def, def, defCols)
+	if len(got) != len(defCols) || got[0] != defCols[0] || got[1] != defCols[1] {
+		t.Errorf("ColumnsFor(def, def, defCols) = %v, want %v", got, defCols)
+	}
+
+	// Override CSV with spaces: headers should be trimmed and upper-cased.
+	got = ColumnsFor("id, name ,status", def, defCols)
+	want := []Column{
+		{Header: "ID", Path: "id"},
+		{Header: "NAME", Path: "name"},
+		{Header: "STATUS", Path: "status"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("len = %d, want %d; got %v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("col[%d] = %v, want %v", i, got[i], want[i])
+		}
+	}
+
+	// Empty entries (e.g. trailing comma) should be skipped.
+	got = ColumnsFor("id,,name", def, defCols)
+	if len(got) != 2 {
+		t.Errorf("expected 2 cols (empty entry skipped), got %d: %v", len(got), got)
+	}
+}
+
 func TestTruncate(t *testing.T) {
 	tests := []struct {
 		name string

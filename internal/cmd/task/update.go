@@ -30,7 +30,7 @@ func newUpdateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Short: "Update a task",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := validateID(args[0])
+			id, err := cmdutil.ValidateID(args[0])
 			if err != nil {
 				return err
 			}
@@ -49,7 +49,7 @@ func newUpdateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 				body:   body,
 				json:   g.JSON,
 				quiet:  g.Quiet,
-				client: clientFunc(g),
+				client: g.ClientFunc(),
 				out:    cmd.OutOrStdout(),
 			}
 			return runUpdate(cmd.Context(), o)

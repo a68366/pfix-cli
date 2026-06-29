@@ -51,14 +51,14 @@ func newCommentListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Short: "List comments on a task",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := validateID(args[0])
+			id, err := cmdutil.ValidateID(args[0])
 			if err != nil {
 				return err
 			}
 			o.id = id
 			o.json = g.JSON
 			o.quiet = g.Quiet
-			o.client = clientFunc(g)
+			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runCommentList(cmd.Context(), o)
 		},
@@ -89,7 +89,7 @@ func runCommentList(ctx context.Context, o *commentListOptions) error {
 	var env struct {
 		Comments []map[string]any `json:"comments"`
 	}
-	if err := jsonUnmarshal(raw, &env); err != nil {
+	if err := cmdutil.DecodeJSON(raw, &env); err != nil {
 		return err
 	}
 	// Truncate description to 80 runes (collapse newlines first).
@@ -122,14 +122,14 @@ func newCommentAddCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Short: "Add a comment to a task",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := validateID(args[0])
+			id, err := cmdutil.ValidateID(args[0])
 			if err != nil {
 				return err
 			}
 			o.id = id
 			o.json = g.JSON
 			o.quiet = g.Quiet
-			o.client = clientFunc(g)
+			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			o.in = cmd.InOrStdin()
 			return runCommentAdd(cmd.Context(), o)
@@ -168,7 +168,7 @@ func runCommentAdd(ctx context.Context, o *commentAddOptions) error {
 	var resp struct {
 		ID int `json:"id"`
 	}
-	if err := jsonUnmarshal(raw, &resp); err != nil {
+	if err := cmdutil.DecodeJSON(raw, &resp); err != nil {
 		return err
 	}
 	if o.quiet {

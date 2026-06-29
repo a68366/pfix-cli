@@ -44,7 +44,7 @@ func newViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			o.json = g.JSON
 			o.fields = g.Fields
 			o.quiet = g.Quiet
-			o.client = clientFunc(g)
+			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runView(cmd.Context(), o, args[0])
 		},
@@ -53,11 +53,11 @@ func newViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 }
 
 func runView(ctx context.Context, o *viewOptions, idStr string) error {
-	id, err := validateID(idStr)
+	id, err := cmdutil.ValidateID(idStr)
 	if err != nil {
 		return err
 	}
-	fields := fieldsCSV(o.fields, viewDefaultFields)
+	fields := cmdutil.FieldsCSV(o.fields, viewDefaultFields)
 	path := "task/" + strconv.Itoa(id) + "?fields=" + url.QueryEscape(fields)
 	client, err := o.client()
 	if err != nil {
@@ -73,9 +73,9 @@ func runView(ctx context.Context, o *viewOptions, idStr string) error {
 	var env struct {
 		Task map[string]any `json:"task"`
 	}
-	if err := jsonUnmarshal(raw, &env); err != nil {
+	if err := cmdutil.DecodeJSON(raw, &env); err != nil {
 		return err
 	}
-	output.Detail(o.out, columnsFor(fields, viewDefaultFields, viewColumns), env.Task)
+	output.Detail(o.out, output.ColumnsFor(fields, viewDefaultFields, viewColumns), env.Task)
 	return nil
 }

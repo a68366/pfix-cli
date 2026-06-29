@@ -30,7 +30,7 @@ func newCreateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			o.json = g.JSON
 			o.quiet = g.Quiet
-			o.client = clientFunc(g)
+			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runCreate(cmd.Context(), o)
 		},
@@ -64,7 +64,7 @@ func runCreate(ctx context.Context, o *createOptions) error {
 	var resp struct {
 		ID int `json:"id"`
 	}
-	if err := jsonUnmarshal(raw, &resp); err != nil {
+	if err := cmdutil.DecodeJSON(raw, &resp); err != nil {
 		return err
 	}
 	if o.quiet {
