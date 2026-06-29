@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/a68366/pfix-cli/internal/cmdutil"
+	"github.com/a68366/pfix-cli/internal/output"
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
@@ -123,7 +123,9 @@ func runAPI(ctx context.Context, o *apiOptions, path string) error {
 		return err
 	}
 	if !o.silent {
-		printBody(o.out, data)
+		if err := output.JSON(o.out, data); err != nil {
+			return err
+		}
 	}
 	if resp.StatusCode >= 300 {
 		return planfix.ParseError(resp.StatusCode, data)
@@ -212,20 +214,5 @@ func writeHeaders(w io.Writer, h http.Header) {
 	sort.Strings(keys)
 	for _, k := range keys {
 		fmt.Fprintf(w, "%s: %s\n", k, strings.Join(h[k], ", "))
-	}
-}
-
-func printBody(w io.Writer, data []byte) {
-	if json.Valid(data) {
-		var pretty bytes.Buffer
-		if json.Indent(&pretty, data, "", "  ") == nil {
-			w.Write(pretty.Bytes())
-			fmt.Fprintln(w)
-			return
-		}
-	}
-	w.Write(data)
-	if len(data) > 0 && data[len(data)-1] != '\n' {
-		fmt.Fprintln(w)
 	}
 }
