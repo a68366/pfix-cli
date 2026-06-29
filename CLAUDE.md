@@ -2,7 +2,7 @@ pfix is a public, open-source command-line client for the Planfix REST API, writ
 
 ## Status
 
-Bootstrap phase. The Go module and command tree are still being scaffolded — the architecture below is the target, not a description of what already exists. Keep this file in sync as code lands.
+Milestone 1 is implemented and merged to `main`: the config/profile layer, the Planfix transport client, `auth` (login/status/logout), and the raw `api` passthrough — all tested. Still to come: the typed resource commands (`task`, then `project`/`comment`) and the human-readable table output layer. Keep this file in sync as code lands.
 
 ## Project rules
 
@@ -12,41 +12,50 @@ Bootstrap phase. The Go module and command tree are still being scaffolded — t
 
 ## Stack
 
-- Go (latest stable) with Cobra for the command tree.
-- Standard-library `net/http` for the API client; `gopkg.in/yaml.v3` for config; `golang.org/x/time/rate` for request throttling.
-- Module path: `github.com/a68366/pfix-cli` (set at `go mod init`).
+- Go (latest stable) with `github.com/spf13/cobra` for the command tree.
+- Standard-library `net/http` for the API client; `gopkg.in/yaml.v3` for config; `golang.org/x/time/rate` for request throttling; `golang.org/x/term` for hidden token entry.
+- Module path: `github.com/a68366/pfix-cli`. Binary: `pfix`.
+- Deliberately lean: no config framework (no Viper), no color libraries.
 
-## Layout (target)
+## Layout
 
-- `main.go` — thin entry point.
-- `internal/cmd/` — Cobra commands: `root`, `auth/`, `task/` (including `comment`), `project/`, `config/`, `api/`.
-- `internal/planfix/` — Planfix REST client. A single low-level `Client.Do(ctx, method, path, body, headers)` carries auth, throttling, and retries; the typed commands and the raw `api` command both go through it.
-- `internal/config/` — profile loading/saving and value precedence.
-- `internal/output/` — table rendering and raw-JSON emission.
+Implemented:
+- `main.go` — thin entry point (`cmd.Execute`).
+- `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`.
+- `internal/cmdutil/` — `GlobalOpts` (persistent flags) and the `Client()` helper that builds a configured client from the active profile.
+- `internal/planfix/` — Planfix REST client. A single low-level `Client.Do(ctx, method, path, body, headers)` carries auth, throttling, and retries; the raw `api` command and the future typed commands all go through it. `errors.go` holds `APIError`/`ParseError`.
+- `internal/config/` — profile load/save (atomic, mode 0600) and value precedence (`Resolve`, `ResolveProfileName`).
+- `internal/buildinfo/` — version/commit/date injected at build time.
 
-## Build order (MVP)
+Planned (not yet present):
+- `internal/cmd/task/` (+ `comment`), `internal/cmd/project/`, `internal/cmd/config/`.
+- `internal/output/` — table rendering; the `--json` flag becomes meaningful once typed commands have a non-JSON default.
 
-1. `auth` + generic `api` — credentials/profiles plus the raw passthrough come first; together they make every endpoint reachable immediately.
-2. `task` — list, view, create, update, and comments.
+## Build order
+
+1. **Done (M1):** `auth` + generic `api` — credentials/profiles plus the raw passthrough make every endpoint reachable immediately.
+2. **Next (M2):** `task` — list, view, create, update, and comments.
 3. `project`, then the remaining resources.
 
 ## Conventions
 
 - Auth: Bearer token + account domain; base URL `https://<domain>/rest/...`.
 - Config file: `~/.config/pfix/config.yml` (mode 0600) with multiple named profiles.
-- Precedence: command-line flags > environment (`PFIX_DOMAIN`, `PFIX_TOKEN`, `PFIX_PROFILE`) > config file.
-- Output: human-readable table by default; `--json` emits the API response unmodified (raw passthrough). Errors go to stderr with a non-zero exit code.
+- Precedence: command-line flags > environment (`PFIX_DOMAIN`, `PFIX_TOKEN`, `PFIX_PROFILE`, `PFIX_CONFIG`) > config file. Profile name resolves through `config.ResolveProfileName` (`flag > PFIX_PROFILE > current_profile > "default"`) — use it everywhere a command needs the active profile, so the commands stay consistent.
+- Output: `--json` will emit the API response unmodified (raw passthrough); typed commands will default to a human-readable table. Today `api` always emits raw JSON, pretty-printed via stdlib `json.Indent` (no color). Errors go to stderr with a non-zero exit code.
+- Transport: `Client.Do` returns the HTTP response for any status (callers inspect `StatusCode` and use `planfix.ParseError` for detail). It retries connection errors + 5xx, never 4xx.
 - API specifics: list endpoints are POST with `pageSize`/`offset`/`fields`/`filters`; fields must be requested explicitly — ship sensible per-resource defaults, overridable with `--fields`.
 
 ## Toolchain
 
+- Use the project's Go toolchain (latest stable). The `go` directive is pinned in `go.mod`; keep the module graph tidy (`go mod tidy`) — every imported dependency must be in the direct `require` block, not `// indirect`.
 - Format: `gofmt -l .` (output must be empty).
 - Vet: `go vet ./...`.
-- Lint: `golangci-lint run`.
 - Test: `go test ./...`. Table-driven tests; stand up a fake API with `net/http/httptest`; mock only at the HTTP boundary, never the code under test.
-- Build: `go build ./...`; release builds embed version metadata via `-ldflags -X`.
+- Lint (optional, if installed): `golangci-lint run`.
+- Build: `go build -o pfix .`; release builds embed metadata via `-ldflags "-X github.com/a68366/pfix-cli/internal/buildinfo.Version=..."` (and `Commit`/`Date`).
 
 ## Testing rules
 
 - All behaviour changes must be covered by tests — if it isn't tested, it isn't done.
-- Test decisions and branches (error mapping, config precedence, pagination, request building), not glue code.
+- Test decisions and branches (error mapping, config precedence, retry behavior, request building), not glue code.
