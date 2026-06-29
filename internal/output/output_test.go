@@ -79,11 +79,94 @@ func TestJSONInvalidPassthrough(t *testing.T) {
 	}
 }
 
-func TestTruncate(t *testing.T) {
-	if got := Truncate("hello world", 5); got != "hello…" {
-		t.Fatalf("got %q", got)
+func TestDetail(t *testing.T) {
+	cols := []Column{
+		{"ID", "id"},
+		{"NAME", "name"},
+		{"STATUS", "status.name"},
+		{"DESCRIPTION", "description"},
 	}
-	if got := Truncate("héllo", 100); got != "héllo" {
-		t.Fatalf("got %q", got)
+	obj := map[string]any{
+		"id":          float64(15),
+		"name":        "A",
+		"status":      map[string]any{"name": "New"},
+		"description": "line1\nline2",
+	}
+	var b bytes.Buffer
+	Detail(&b, cols, obj)
+	out := b.String()
+
+	// basic headers and flattened values
+	for _, want := range []string{"ID", "15", "NAME", "A", "STATUS", "New"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q:\n%s", want, out)
+		}
+	}
+
+	// newline in description must be collapsed: the literal sequence "line1\nline2"
+	// (a real newline between them) must not appear; both words must be on one line
+	if strings.Contains(out, "line1\nline2") {
+		t.Errorf("newline inside cell was not cleaned:\n%s", out)
+	}
+	if !strings.Contains(out, "line1") || !strings.Contains(out, "line2") {
+		t.Errorf("description words missing from output:\n%s", out)
+	}
+	// confirm they appear on the same output line (no newline between them)
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "line1") && strings.Contains(line, "line2") {
+			break // found together on one line — good
+		}
+		if strings.Contains(line, "line1") {
+			t.Errorf("line1 and line2 not on the same output line:\n%s", out)
+			break
+		}
+	}
+}
+
+func TestTruncate(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		max  int
+		want string
+	}{
+		{
+			name: "truncated ascii",
+			in:   "hello world",
+			max:  5,
+			want: "hello…", // 11 runes > 5 → cut + ellipsis
+		},
+		{
+			name: "under limit multibyte",
+			in:   "héllo",
+			max:  100,
+			want: "héllo", // 5 runes ≤ 100 → unchanged
+		},
+		{
+			name: "max zero non-empty",
+			in:   "hello",
+			max:  0,
+			want: "…", // 5 runes > 0 → r[:0] + ellipsis
+		},
+		{
+			name: "exact boundary no ellipsis",
+			in:   "hello",
+			max:  5,
+			want: "hello", // 5 runes == 5 → unchanged, no ellipsis
+		},
+		{
+			name: "multibyte over limit rune boundary",
+			in:   "héllo wörld", // 11 runes: h é l l o ' ' w ö r l d
+			max:  5,
+			want: "héllo…", // r[:5] = "héllo"
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Truncate(tt.in, tt.max)
+			if got != tt.want {
+				t.Errorf("Truncate(%q, %d) = %q, want %q", tt.in, tt.max, got, tt.want)
+			}
+		})
 	}
 }
