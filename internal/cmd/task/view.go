@@ -2,7 +2,6 @@ package task
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/url"
 	"strconv"
@@ -54,9 +53,9 @@ func newViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 }
 
 func runView(ctx context.Context, o *viewOptions, idStr string) error {
-	id, err := strconv.Atoi(idStr)
+	id, err := validateID(idStr)
 	if err != nil {
-		return fmt.Errorf("id must be a number, got %q", idStr)
+		return err
 	}
 	fields := fieldsCSV(o.fields, viewDefaultFields)
 	path := "task/" + strconv.Itoa(id) + "?fields=" + url.QueryEscape(fields)

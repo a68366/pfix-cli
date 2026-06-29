@@ -2,6 +2,8 @@ package task
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -17,7 +19,7 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Use:   "task",
 		Short: "Work with Planfix tasks",
 	}
-	cmd.AddCommand(newListCmd(g), newViewCmd(g))
+	cmd.AddCommand(newListCmd(g), newViewCmd(g), newCreateCmd(g), newUpdateCmd(g))
 	return cmd
 }
 
@@ -57,4 +59,13 @@ func columnsFor(fields, def string, defCols []output.Column) []output.Column {
 
 func jsonUnmarshal(b []byte, v any) error {
 	return json.Unmarshal(b, v)
+}
+
+// validateID parses a string task ID and returns an informative error on failure.
+func validateID(idStr string) (int, error) {
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return 0, fmt.Errorf("id must be a number, got %q", idStr)
+	}
+	return id, nil
 }
