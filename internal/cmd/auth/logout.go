@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -24,22 +25,27 @@ func newLogoutCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			name := firstNonEmpty(g.Profile, cfg.CurrentProfile)
-			if name == "" {
-				name = "default"
-			}
-			if _, ok := cfg.Profiles[name]; !ok {
-				return fmt.Errorf("no such profile: %s", name)
-			}
-			delete(cfg.Profiles, name)
-			if cfg.CurrentProfile == name {
-				cfg.CurrentProfile = ""
-			}
-			if err := config.Save(path, cfg); err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Removed profile %q\n", name)
-			return nil
+			name := config.ResolveProfileName(g.Profile, os.Getenv, cfg)
+			return runLogout(path, name, cmd.OutOrStdout())
 		},
 	}
+}
+
+func runLogout(path, name string, out io.Writer) error {
+	cfg, err := config.Load(path)
+	if err != nil {
+		return err
+	}
+	if _, ok := cfg.Profiles[name]; !ok {
+		return fmt.Errorf("no such profile: %s", name)
+	}
+	delete(cfg.Profiles, name)
+	if cfg.CurrentProfile == name {
+		cfg.CurrentProfile = ""
+	}
+	if err := config.Save(path, cfg); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Removed profile %q\n", name)
+	return nil
 }

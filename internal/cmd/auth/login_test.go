@@ -13,12 +13,13 @@ import (
 func baseOpts(t *testing.T, validate func(context.Context, string, string) error) loginOptions {
 	path := filepath.Join(t.TempDir(), "config.yml")
 	return loginOptions{
-		profile:    "default",
-		in:         strings.NewReader("example.planfix.com\n"),
-		out:        &strings.Builder{},
-		readSecret: func(string) (string, error) { return "tok-123", nil },
-		validate:   validate,
-		configPath: func() (string, error) { return path, nil },
+		flagProfile: "default",
+		env:         func(string) string { return "" },
+		in:          strings.NewReader("example.planfix.com\n"),
+		out:         &strings.Builder{},
+		readSecret:  func(string) (string, error) { return "tok-123", nil },
+		validate:    validate,
+		configPath:  func() (string, error) { return path, nil },
 	}
 }
 
@@ -47,6 +48,34 @@ func TestRunLoginDoesNotSaveOnValidationFailure(t *testing.T) {
 	cfg, _ := config.Load(path)
 	if len(cfg.Profiles) != 0 {
 		t.Errorf("profile should not be saved, got %v", cfg.Profiles)
+	}
+}
+
+func TestRunLoginRespectsPFIXPROFILE(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yml")
+	o := loginOptions{
+		flagProfile: "",
+		env: func(k string) string {
+			if k == "PFIX_PROFILE" {
+				return "work"
+			}
+			return ""
+		},
+		in:         strings.NewReader("example.planfix.com\n"),
+		out:        &strings.Builder{},
+		readSecret: func(string) (string, error) { return "tok-123", nil },
+		validate:   func(context.Context, string, string) error { return nil },
+		configPath: func() (string, error) { return path, nil },
+	}
+	if err := runLogin(context.Background(), o); err != nil {
+		t.Fatalf("runLogin: %v", err)
+	}
+	cfg, _ := config.Load(path)
+	if _, ok := cfg.Profiles["work"]; !ok {
+		t.Errorf("expected credentials in profile 'work', got profiles: %v", cfg.Profiles)
+	}
+	if _, ok := cfg.Profiles["default"]; ok {
+		t.Errorf("should not have written to 'default' profile, got: %v", cfg.Profiles)
 	}
 }
 

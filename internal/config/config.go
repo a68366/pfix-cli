@@ -89,9 +89,14 @@ type Resolved struct {
 // ErrNotAuthenticated indicates no usable domain/token was found.
 var ErrNotAuthenticated = errors.New("not authenticated: run `pfix auth login` or set PFIX_DOMAIN and PFIX_TOKEN")
 
+// ResolveProfileName picks the active profile name: flag > PFIX_PROFILE > current_profile > "default".
+func ResolveProfileName(flagProfile string, env func(string) string, cfg *Config) string {
+	return firstNonEmpty(flagProfile, env("PFIX_PROFILE"), cfg.CurrentProfile, "default")
+}
+
 // Resolve applies precedence flags > env > config file.
 func Resolve(cfg *Config, ov Overrides, env func(string) string) (Resolved, error) {
-	name := firstNonEmpty(ov.Profile, env("PFIX_PROFILE"), cfg.CurrentProfile, "default")
+	name := ResolveProfileName(ov.Profile, env, cfg)
 	p := cfg.Profiles[name]
 
 	res := Resolved{

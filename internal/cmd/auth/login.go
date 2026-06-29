@@ -17,12 +17,13 @@ import (
 )
 
 type loginOptions struct {
-	profile    string
-	in         io.Reader
-	out        io.Writer
-	readSecret func(prompt string) (string, error)
-	validate   func(ctx context.Context, domain, token string) error
-	configPath func() (string, error)
+	flagProfile string
+	env         func(string) string
+	in          io.Reader
+	out         io.Writer
+	readSecret  func(prompt string) (string, error)
+	validate    func(ctx context.Context, domain, token string) error
+	configPath  func() (string, error)
 }
 
 func newLoginCmd(g *cmdutil.GlobalOpts) *cobra.Command {
@@ -32,12 +33,13 @@ func newLoginCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runLogin(cmd.Context(), loginOptions{
-				profile:    firstNonEmpty(g.Profile, "default"),
-				in:         cmd.InOrStdin(),
-				out:        cmd.OutOrStdout(),
-				readSecret: readSecretFromTerminal,
-				validate:   validateCredentials,
-				configPath: func() (string, error) { return config.DefaultPath(os.Getenv) },
+				flagProfile: g.Profile,
+				env:         os.Getenv,
+				in:          cmd.InOrStdin(),
+				out:         cmd.OutOrStdout(),
+				readSecret:  readSecretFromTerminal,
+				validate:    validateCredentials,
+				configPath:  func() (string, error) { return config.DefaultPath(os.Getenv) },
 			})
 		},
 	}
@@ -77,15 +79,16 @@ func runLogin(ctx context.Context, o loginOptions) error {
 	if err != nil {
 		return err
 	}
-	cfg.Profiles[o.profile] = config.Profile{Domain: domain, Token: token}
+	profile := config.ResolveProfileName(o.flagProfile, o.env, cfg)
+	cfg.Profiles[profile] = config.Profile{Domain: domain, Token: token}
 	if cfg.CurrentProfile == "" {
-		cfg.CurrentProfile = o.profile
+		cfg.CurrentProfile = profile
 	}
 	if err := config.Save(path, cfg); err != nil {
 		return err
 	}
 
-	fmt.Fprintf(o.out, "Saved profile %q for %s\n", o.profile, domain)
+	fmt.Fprintf(o.out, "Saved profile %q for %s\n", profile, domain)
 	return nil
 }
 

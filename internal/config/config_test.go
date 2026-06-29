@@ -12,6 +12,30 @@ func envFrom(m map[string]string) func(string) string {
 	return func(k string) string { return m[k] }
 }
 
+func TestResolveProfileName(t *testing.T) {
+	cases := []struct {
+		name           string
+		flagProfile    string
+		env            map[string]string
+		currentProfile string
+		want           string
+	}{
+		{"flag wins over all", "prod", map[string]string{"PFIX_PROFILE": "env", "CURRENT": "cur"}, "cur", "prod"},
+		{"PFIX_PROFILE beats current_profile", "", map[string]string{"PFIX_PROFILE": "env"}, "cur", "env"},
+		{"current_profile beats default", "", nil, "cur", "cur"},
+		{"falls back to default", "", nil, "", "default"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			cfg := &Config{CurrentProfile: c.currentProfile, Profiles: map[string]Profile{}}
+			got := ResolveProfileName(c.flagProfile, envFrom(c.env), cfg)
+			if got != c.want {
+				t.Errorf("ResolveProfileName = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
 func TestResolvePrecedence(t *testing.T) {
 	cfg := &Config{
 		CurrentProfile: "default",

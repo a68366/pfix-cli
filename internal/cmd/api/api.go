@@ -66,6 +66,10 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 }
 
 func runAPI(ctx context.Context, o *apiOptions, path string) error {
+	if o.inputFile != "" && (len(o.fields) > 0 || len(o.rawFields) > 0) {
+		return fmt.Errorf("--input cannot be combined with -F/--field or -f/--raw-field")
+	}
+
 	params, err := parseFields(o.fields, o.rawFields, o.in)
 	if err != nil {
 		return err

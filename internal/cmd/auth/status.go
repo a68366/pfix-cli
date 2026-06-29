@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/a68366/pfix-cli/internal/cmdutil"
+	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
 func newStatusCmd(g *cmdutil.GlobalOpts) *cobra.Command {
@@ -29,13 +30,12 @@ func newStatusCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 				return err
 			}
 			defer resp.Body.Close()
-			_, _ = io.Copy(io.Discard, resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			if resp.StatusCode == 200 {
 				fmt.Fprintln(out, "Status:  valid")
 				return nil
 			}
-			fmt.Fprintf(out, "Status:  invalid (HTTP %d)\n", resp.StatusCode)
-			return fmt.Errorf("token check failed (HTTP %d)", resp.StatusCode)
+			return planfix.ParseError(resp.StatusCode, body)
 		},
 	}
 }

@@ -108,6 +108,39 @@ func TestRunAPIReturnsErrorOnNon2xx(t *testing.T) {
 	}
 }
 
+func TestRunAPIRejectsInputWithFields(t *testing.T) {
+	// --input combined with -F or -f must be rejected before any request is sent.
+	requestSent := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestSent = true
+		io.WriteString(w, `{}`)
+	}))
+	defer srv.Close()
+
+	o := optsFor(srv.URL, strings.NewReader(`{"a":1}`), &strings.Builder{})
+	o.inputFile = "-"
+	o.fields = []string{"n=5"}
+	err := runAPI(context.Background(), o, "task/list")
+	if err == nil {
+		t.Fatal("expected error when --input is combined with -F")
+	}
+	if requestSent {
+		t.Error("no HTTP request should have been sent")
+	}
+
+	// Also check with --raw-field.
+	o2 := optsFor(srv.URL, strings.NewReader(`{}`), &strings.Builder{})
+	o2.inputFile = "-"
+	o2.rawFields = []string{"key=val"}
+	requestSent = false
+	if err2 := runAPI(context.Background(), o2, "task/list"); err2 == nil {
+		t.Fatal("expected error when --input is combined with -f")
+	}
+	if requestSent {
+		t.Error("no HTTP request should have been sent")
+	}
+}
+
 func TestSplitAndMagicValue(t *testing.T) {
 	k, v, err := splitField("name=hello")
 	if err != nil || k != "name" || v != "hello" {
