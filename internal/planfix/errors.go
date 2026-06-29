@@ -3,12 +3,12 @@ package planfix
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 // APIError represents a non-2xx response from the Planfix API.
 type APIError struct {
 	StatusCode int
+	Code       int
 	Message    string
 	Body       []byte
 }
@@ -20,38 +20,40 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("planfix API error (HTTP %d)", e.StatusCode)
 }
 
-// ParseError builds an APIError, extracting a human message from the body when possible.
+// ParseError builds an APIError, extracting the message and app code from the body.
 func ParseError(statusCode int, body []byte) *APIError {
-	return &APIError{StatusCode: statusCode, Message: extractMessage(body), Body: body}
+	msg, code := parseBody(body)
+	return &APIError{StatusCode: statusCode, Code: code, Message: msg, Body: body}
 }
 
-// extractMessage tries common error shapes, falling back to a trimmed body.
-// NOTE: confirm Planfix's exact error envelope against the live API and extend here.
-func extractMessage(body []byte) string {
+// parseBody extracts (message, appCode) from a Planfix error envelope. A body
+// that is not valid JSON (e.g. an HTML error page) yields ("", 0) so the error
+// renders as a clean "HTTP <status>" rather than dumping markup.
+func parseBody(body []byte) (string, int) {
+	if !json.Valid(body) {
+		return "", 0
+	}
 	var probe struct {
 		Error   json.RawMessage `json:"error"`
 		Message string          `json:"message"`
+		Code    int             `json:"code"`
 	}
-	if err := json.Unmarshal(body, &probe); err == nil {
-		if probe.Message != "" {
-			return probe.Message
-		}
-		if len(probe.Error) > 0 {
-			var s string
-			if json.Unmarshal(probe.Error, &s) == nil && s != "" {
-				return s
-			}
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return "", 0
+	}
+	msg := probe.Message
+	if msg == "" && len(probe.Error) > 0 {
+		var s string
+		if json.Unmarshal(probe.Error, &s) == nil && s != "" {
+			msg = s
+		} else {
 			var obj struct {
 				Message string `json:"message"`
 			}
-			if json.Unmarshal(probe.Error, &obj) == nil && obj.Message != "" {
-				return obj.Message
+			if json.Unmarshal(probe.Error, &obj) == nil {
+				msg = obj.Message
 			}
 		}
 	}
-	s := strings.TrimSpace(string(body))
-	if len(s) > 200 {
-		s = s[:200] + "…"
-	}
-	return s
+	return msg, probe.Code
 }
