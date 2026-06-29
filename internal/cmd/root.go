@@ -5,6 +5,7 @@ import (
 
 	"github.com/a68366/pfix-cli/internal/cmd/api"
 	"github.com/a68366/pfix-cli/internal/cmd/auth"
+	"github.com/a68366/pfix-cli/internal/cmd/project"
 	"github.com/a68366/pfix-cli/internal/cmd/task"
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 )
@@ -31,6 +32,7 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(auth.NewCmd(g))
 	root.AddCommand(api.NewCmd(g))
 	root.AddCommand(task.NewCmd(g))
+	root.AddCommand(project.NewCmd(g))
 
 	return root
 }
