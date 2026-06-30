@@ -36,7 +36,7 @@ func newCreateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&o.name, "name", "", "Contact first name (required)")
-	cmd.Flags().IntVar(&o.template, "template", 0, "Contact template ID (required; find via 'pfix api contact/list --fields template')")
+	cmd.Flags().IntVar(&o.template, "template", 0, "Contact template ID (required; find via 'pfix contact list --fields template')")
 	cmd.Flags().StringVar(&o.lastname, "lastname", "", "Contact last name")
 	cmd.Flags().StringVar(&o.email, "email", "", "Contact email address")
 	_ = cmd.MarkFlagRequired("name")
