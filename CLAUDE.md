@@ -2,10 +2,11 @@ pfix is a public, open-source command-line client for the Planfix REST API, writ
 
 ## Status
 
-Milestones 1–3 are implemented and merged to `main`:
+Milestones 1–4 are implemented and merged to `main`:
 - **M1:** the config/profile layer, the Planfix transport client, `auth` (login/status/logout), and the raw `api` passthrough.
 - **M2:** the typed `task` command group (`list`, `view`, `create`, `update`, `comment list`, `comment add`) and the `internal/output` rendering layer (table/detail/raw-JSON) that makes `--json`/`--fields`/`--quiet` meaningful.
 - **M3:** the typed `project` command group (`list`, `view`, `create`, `update` — projects have no comments), plus extraction of the shared command helpers into `cmdutil` (`FieldsCSV`/`ValidateID`/`DecodeJSON`/`ClientFunc`) and `output` (`ColumnsFor`) so every resource reuses them.
+- **M4:** the typed `contact` command group (`list`, `view`, `create`, `update`) for people and companies. `contact create` requires `--template` (Planfix rejects a templateless contact).
 
 All tested. Still to come: the remaining Planfix resources. Keep this file in sync as code lands.
 
@@ -26,7 +27,7 @@ All tested. Still to come: the remaining Planfix resources. Keep this file in sy
 
 Implemented:
 - `main.go` — thin entry point (`cmd.Execute`).
-- `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`, `task/` (`list`, `view`, `create`, `update`, and the `comment` sub-group), `project/` (`list`, `view`, `create`, `update`).
+- `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`, `task/` (`list`, `view`, `create`, `update`, and the `comment` sub-group), `project/` (`list`, `view`, `create`, `update`), `contact/` (`list`, `view`, `create`, `update`).
 - `internal/cmdutil/` — `GlobalOpts` (persistent flags), the `Client()`/`ClientFunc()` helpers that build a configured client from the active profile, and the resource-agnostic command helpers shared by every typed command (`FieldsCSV`, `ValidateID`, `DecodeJSON`).
 - `internal/planfix/` — Planfix REST client. A low-level `Client.Do(ctx, method, path, body, headers)` carries auth, throttling, and retries; `Client.JSON(ctx, method, path, body)` is the typed-command convenience over it (marshals the body, returns raw response bytes, maps status ≥300 to `*APIError`). `errors.go` holds `APIError` (incl. the Planfix app `Code`)/`ParseError`.
 - `internal/output/` — renders decoded JSON: `Table`/`Detail` via `text/tabwriter`, a dot-path `Flatten` (e.g. `status.name`; an object with no `name` falls back to its `id`), `ColumnsFor` (default vs `--fields`-derived columns), rune-safe `Truncate`, and `JSON` (pretty-print/raw passthrough — shared with `api`).
@@ -41,7 +42,8 @@ Planned (not yet present):
 1. **Done (M1):** `auth` + generic `api` — credentials/profiles plus the raw passthrough make every endpoint reachable immediately.
 2. **Done (M2):** `task` — list, view, create, update, and comments + the `internal/output` rendering layer.
 3. **Done (M3):** `project` — list, view, create, update + shared command-helper extraction.
-4. **Next (M4):** the remaining Planfix resources.
+4. **Done (M4):** `contact` — list, view, create, update (people + companies).
+5. **Next (M5):** the remaining Planfix resources.
 
 ## Conventions
 
