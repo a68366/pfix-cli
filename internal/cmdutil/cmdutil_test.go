@@ -115,6 +115,38 @@ func TestValidateObjectType(t *testing.T) {
 	}
 }
 
+func TestApplyFilter(t *testing.T) {
+	t.Run("empty is no-op", func(t *testing.T) {
+		b := map[string]any{"x": 1}
+		if err := ApplyFilter(b, ""); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := b["filters"]; ok {
+			t.Fatal("filters should not be set")
+		}
+	})
+	t.Run("valid array", func(t *testing.T) {
+		b := map[string]any{}
+		if err := ApplyFilter(b, `[{"type":1,"operator":"equal","value":5}]`); err != nil {
+			t.Fatal(err)
+		}
+		arr, ok := b["filters"].([]any)
+		if !ok || len(arr) != 1 {
+			t.Fatalf("filters = %#v", b["filters"])
+		}
+	})
+	t.Run("invalid json errors", func(t *testing.T) {
+		b := map[string]any{}
+		err := ApplyFilter(b, "not json")
+		if err == nil || !strings.Contains(err.Error(), "invalid --filter JSON") {
+			t.Fatalf("err = %v", err)
+		}
+		if _, ok := b["filters"]; ok {
+			t.Fatal("filters should not be set on error")
+		}
+	})
+}
+
 func TestDecodeJSON(t *testing.T) {
 	t.Run("invalid JSON returns decode response error", func(t *testing.T) {
 		var x map[string]any

@@ -23,6 +23,7 @@ type listOptions struct {
 	json          bool
 	fields        string
 	quiet         bool
+	filter        string
 	client        func() (*planfix.Client, error)
 	out           io.Writer
 }
@@ -44,6 +45,7 @@ func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&o.limit, "limit", 100, "Maximum data tags to return")
 	cmd.Flags().IntVar(&o.offset, "offset", 0, "Result offset (for paging)")
+	cmd.Flags().StringVar(&o.filter, "filter", "", "Filter results: a Planfix filters JSON array, e.g. '[{\"type\":51,\"operator\":\"equal\",\"value\":1}]'")
 	return cmd
 }
 
@@ -53,6 +55,9 @@ func runList(ctx context.Context, o *listOptions) error {
 		"offset":   o.offset,
 		"pageSize": o.limit,
 		"fields":   fields,
+	}
+	if err := cmdutil.ApplyFilter(body, o.filter); err != nil {
+		return err
 	}
 	client, err := o.client()
 	if err != nil {

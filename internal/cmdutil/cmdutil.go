@@ -78,6 +78,21 @@ func (g *GlobalOpts) ClientFunc() func() (*planfix.Client, error) {
 	}
 }
 
+// ApplyFilter parses the --filter JSON (a Planfix filters value, usually an array)
+// and, when non-empty, sets body["filters"]. Empty filter is a no-op. Invalid JSON
+// returns a clear error.
+func ApplyFilter(body map[string]any, filter string) error {
+	if filter == "" {
+		return nil
+	}
+	var v any
+	if err := json.Unmarshal([]byte(filter), &v); err != nil {
+		return fmt.Errorf("invalid --filter JSON: %w", err)
+	}
+	body["filters"] = v
+	return nil
+}
+
 // Client builds a Planfix client from config, applying flag and env overrides.
 func (g *GlobalOpts) Client() (*planfix.Client, config.Resolved, error) {
 	path, err := config.DefaultPath(os.Getenv)

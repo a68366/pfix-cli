@@ -144,3 +144,53 @@ func TestRunListCustomFields(t *testing.T) {
 		t.Errorf("output should not contain EMAIL column when not in fields override: %q", result)
 	}
 }
+
+func TestRunListFilter(t *testing.T) {
+	t.Run("valid filter forwarded in body", func(t *testing.T) {
+		var gotBody string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			b, _ := io.ReadAll(r.Body)
+			gotBody = string(b)
+			io.WriteString(w, `{"result":"success","contacts":[]}`)
+		}))
+		defer srv.Close()
+
+		out := &strings.Builder{}
+		o := &listOptions{
+			limit:  100,
+			filter: `[{"type":1,"operator":"equal","value":5}]`,
+			client: fakeClient(srv.URL),
+			out:    out,
+		}
+		if err := runList(context.Background(), o); err != nil {
+			t.Fatalf("runList: %v", err)
+		}
+		if !strings.Contains(gotBody, `"filters":[{`) {
+			t.Errorf("body missing filters: %q", gotBody)
+		}
+	})
+
+	t.Run("invalid filter errors before HTTP", func(t *testing.T) {
+		requestMade := false
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestMade = true
+			io.WriteString(w, `{"result":"success","contacts":[]}`)
+		}))
+		defer srv.Close()
+
+		out := &strings.Builder{}
+		o := &listOptions{
+			limit:  100,
+			filter: "nope",
+			client: fakeClient(srv.URL),
+			out:    out,
+		}
+		err := runList(context.Background(), o)
+		if err == nil || !strings.Contains(err.Error(), "invalid --filter JSON") {
+			t.Fatalf("err = %v, want invalid --filter JSON", err)
+		}
+		if requestMade {
+			t.Error("HTTP request should not be made when filter is invalid")
+		}
+	})
+}
