@@ -2,7 +2,7 @@ pfix is a public, open-source command-line client for the Planfix REST API, writ
 
 ## Status
 
-Milestones 1–10 are implemented and merged to `main`:
+Milestones 1–11 are implemented and merged to `main`:
 - **M1:** the config/profile layer, the Planfix transport client, `auth` (login/status/logout), and the raw `api` passthrough.
 - **M2:** the typed `task` command group (`list`, `view`, `create`, `update`, `comment list`, `comment add`) and the `internal/output` rendering layer (table/detail/raw-JSON) that makes `--json`/`--fields`/`--quiet` meaningful.
 - **M3:** the typed `project` command group (`list`, `view`, `create`, `update` — projects have no comments), plus extraction of the shared command helpers into `cmdutil` (`FieldsCSV`/`ValidateID`/`DecodeJSON`/`ClientFunc`) and `output` (`ColumnsFor`) so every resource reuses them.
@@ -13,8 +13,9 @@ Milestones 1–10 are implemented and merged to `main`:
 - **M8:** the typed `datatag` command group (`list`, `view` — read-only). Envelope keys are camelCase (`dataTags`/`dataTag`).
 - **M9:** input-validation hardening — `cmdutil.ValidateID` now rejects non-positive ids across every resource.
 - **M10:** the typed `template` command (`list <type>` — read-only). A new GET-based shape: `GET /<type>/templates` with an object-type path segment and no pagination; adds shared `cmdutil.ValidateObjectType`.
+- **M11:** the typed `customfield` command (`list <type>` — read-only). `GET /customfield/<type>` (fixed prefix + type segment), envelope `customfields`; columns ID/NAME/TYPE.
 
-All tested. Still to come: `customfield` (next — `GET /customfield/<type>`); `directory` (no entries on the test account) and `file` (token-scope blocked); `process` (not exposed via REST — postponed). Keep this file in sync as code lands.
+All tested. Still to come: `directory` (no entries on the test account) and `file` (token-scope blocked). `process` is not exposed via REST (postponed). Keep this file in sync as code lands.
 
 ## Project rules
 
@@ -33,7 +34,7 @@ All tested. Still to come: `customfield` (next — `GET /customfield/<type>`); `
 
 Implemented:
 - `main.go` — thin entry point (`cmd.Execute`).
-- `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`, `task/` (`list`, `view`, `create`, `update`, and the `comment` sub-group), `project/` (`list`, `view`, `create`, `update`), `contact/` (`list`, `view`, `create`, `update`), `user/` (`list`, `view` — read-only), `report/` (`list`, `view` — read-only), `datatag/` (`list`, `view` — read-only), `template/` (`list <type>` — read-only, GET-based), `config/` (`list`, `use`, `show` — local profile management). The data package `internal/config` is imported as `pfconfig` inside `internal/cmd/config` to avoid the package-name collision.
+- `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`, `task/` (`list`, `view`, `create`, `update`, and the `comment` sub-group), `project/` (`list`, `view`, `create`, `update`), `contact/` (`list`, `view`, `create`, `update`), `user/` (`list`, `view` — read-only), `report/` (`list`, `view` — read-only), `datatag/` (`list`, `view` — read-only), `template/` (`list <type>` — read-only, GET-based), `customfield/` (`list <type>` — read-only, GET-based), `config/` (`list`, `use`, `show` — local profile management). The data package `internal/config` is imported as `pfconfig` inside `internal/cmd/config` to avoid the package-name collision.
 - `internal/cmdutil/` — `GlobalOpts` (persistent flags), the `Client()`/`ClientFunc()` helpers that build a configured client from the active profile, and the resource-agnostic command helpers shared by every typed command (`FieldsCSV`, `ValidateID`, `DecodeJSON`).
 - `internal/planfix/` — Planfix REST client. A low-level `Client.Do(ctx, method, path, body, headers)` carries auth, throttling, and retries; `Client.JSON(ctx, method, path, body)` is the typed-command convenience over it (marshals the body, returns raw response bytes, maps status ≥300 to `*APIError`). `errors.go` holds `APIError` (incl. the Planfix app `Code`)/`ParseError`.
 - `internal/output/` — renders decoded JSON: `Table`/`Detail` via `text/tabwriter`, a dot-path `Flatten` (e.g. `status.name`; an object with no `name` falls back to its `id`), `ColumnsFor` (default vs `--fields`-derived columns), rune-safe `Truncate`, and `JSON` (pretty-print/raw passthrough — shared with `api`).
@@ -55,7 +56,8 @@ Planned (not yet present):
 8. **Done (M8):** `datatag` — list, view (read-only).
 9. **Done (M9):** input-validation hardening (`ValidateID` rejects non-positive ids).
 10. **Done (M10):** `template` — list per object type (read-only, GET-based).
-11. **Next:** `customfield` (`GET /customfield/<type>`); then `directory`/`file` as access allows. `process` is postponed (not in REST).
+11. **Done (M11):** `customfield` — list per object type (read-only, GET-based).
+12. **Next:** `directory`/`file` as access allows. `process` is postponed (not in REST).
 
 ## Conventions
 
