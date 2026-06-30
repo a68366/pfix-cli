@@ -13,6 +13,8 @@ import (
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
+// viewDefaultFields requests assignees too: it has no detail column (the
+// {users,groups} shape renders poorly in a flat cell) but enriches `--json`.
 const viewDefaultFields = "id,name,description,owner,status,assignees"
 
 var viewColumns = []output.Column{

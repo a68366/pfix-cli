@@ -37,7 +37,7 @@ func TestRunListDefaultTable(t *testing.T) {
 	if !strings.Contains(gotBody, `"pageSize":100`) {
 		t.Errorf("body missing pageSize: %q", gotBody)
 	}
-	if !strings.Contains(gotBody, `"fields":"id,name,description,owner,status"`) {
+	if !strings.Contains(gotBody, `"fields":"id,name,owner,status"`) {
 		t.Errorf("body missing fields: %q", gotBody)
 	}
 	result := out.String()
@@ -116,7 +116,7 @@ func TestRunListCustomLimit(t *testing.T) {
 	if !strings.Contains(gotBody, `"offset":0`) {
 		t.Errorf("body missing offset 0: %q", gotBody)
 	}
-	if !strings.Contains(gotBody, `"fields":"id,name,description,owner,status"`) {
+	if !strings.Contains(gotBody, `"fields":"id,name,owner,status"`) {
 		t.Errorf("body missing default fields: %q", gotBody)
 	}
 }

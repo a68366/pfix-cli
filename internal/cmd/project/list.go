@@ -11,7 +11,7 @@ import (
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
-const listDefaultFields = "id,name,description,owner,status"
+const listDefaultFields = "id,name,owner,status"
 
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},
