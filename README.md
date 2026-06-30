@@ -2,7 +2,7 @@
 
 A command-line client for the [Planfix](https://planfix.com) REST API, written in Go. It ships as a single self-contained binary and is built for two audiences: people working in a terminal, and automation or AI agents that consume machine-readable output.
 
-> **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), and the typed `task` commands (with human-readable table output) are implemented. Further typed resources (`project`, …) are on the [roadmap](#roadmap).
+> **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), and the typed `task` and `project` commands (with human-readable table output) are implemented. Further typed resources are on the [roadmap](#roadmap).
 
 ## Install
 
@@ -93,6 +93,18 @@ Notes:
   `pfix task view <id> --json`). Field names for `--fields` are Planfix REST
   field names; unknown names are silently ignored by the API.
 
+### Projects
+
+The same shape as `task`, for Planfix projects (projects have no comments):
+
+```sh
+pfix project list                              # table; --limit / --offset page
+pfix project list --fields id,name,owner       # choose columns
+pfix project view 12                           # detail block (--json for everything)
+pfix project create --name "Q3 Launch"         # prints the new id
+pfix project update 12 --name "Q3 Launch v2" --status 2
+```
+
 ### Raw API passthrough
 
 `pfix api <path>` makes an authenticated request to any Planfix REST endpoint and prints the raw JSON response — handy for endpoints without a dedicated command yet, and for scripting.
@@ -144,8 +156,8 @@ Choose a profile per command with `--profile staging` or `PFIX_PROFILE=staging`.
 
 ## Roadmap
 
-- Typed `project` commands, then the remaining Planfix resources.
-- Richer `task list` filtering (currently use `api` with a POST body for arbitrary filters).
+- Further typed resources beyond `task` and `project`.
+- Richer list filtering (currently use `api` with a POST body for arbitrary filters).
 - Multi-platform release binaries.
 
 ## Development
