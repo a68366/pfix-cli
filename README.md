@@ -2,7 +2,7 @@
 
 A command-line client for the [Planfix](https://planfix.com) REST API, written in Go. It ships as a single self-contained binary and is built for two audiences: people working in a terminal, and automation or AI agents that consume machine-readable output.
 
-> **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), and the typed `task`, `project`, and `contact` commands (with human-readable table output) are implemented. Further typed resources are on the [roadmap](#roadmap).
+> **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), and the typed `task`, `project`, `contact`, and `user` commands (with human-readable table output) are implemented. Further typed resources are on the [roadmap](#roadmap).
 
 ## Install
 
@@ -116,6 +116,16 @@ pfix contact list                                   # table; --limit / --offset 
 pfix contact view 42                                # detail block (--json for everything)
 pfix contact create --name "Ada" --lastname "Lovelace" --template 1 --email ada@example.com
 pfix contact update 42 --email new@example.com --lastname "Byron"
+```
+
+### Users
+
+Planfix staff/users, read-only (the API does not allow creating users):
+
+```sh
+pfix user list                       # table; --limit / --offset page
+pfix user view 1                     # detail block (--json for everything)
+pfix user list --fields id,name,role # choose columns
 ```
 
 ### Raw API passthrough
