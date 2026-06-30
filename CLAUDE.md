@@ -2,15 +2,16 @@ pfix is a public, open-source command-line client for the Planfix REST API, writ
 
 ## Status
 
-Milestones 1–6 are implemented and merged to `main`:
+Milestones 1–7 are implemented and merged to `main`:
 - **M1:** the config/profile layer, the Planfix transport client, `auth` (login/status/logout), and the raw `api` passthrough.
 - **M2:** the typed `task` command group (`list`, `view`, `create`, `update`, `comment list`, `comment add`) and the `internal/output` rendering layer (table/detail/raw-JSON) that makes `--json`/`--fields`/`--quiet` meaningful.
 - **M3:** the typed `project` command group (`list`, `view`, `create`, `update` — projects have no comments), plus extraction of the shared command helpers into `cmdutil` (`FieldsCSV`/`ValidateID`/`DecodeJSON`/`ClientFunc`) and `output` (`ColumnsFor`) so every resource reuses them.
 - **M4:** the typed `contact` command group (`list`, `view`, `create`, `update`) for people and companies. `contact create` requires `--template` (Planfix rejects a templateless contact).
 - **M5:** the typed `user` command group (`list`, `view` — read-only; the API disables user create and update is sensitive). Resolves the `owner`/`assignee` `user:N` references on tasks/projects.
 - **M6:** the typed `report` command group (`list`, `view` — read-only). `view` decodes the single-report response defensively: Planfix returns it under the misspelled key `repost`, with a `report` fallback.
+- **M7:** the `config` command group (`list`, `use`, `show`) for managing profiles locally (no API), plus `cmdutil.MaskToken` shared with `auth status`.
 
-All tested. Still to come: the remaining Planfix resources. Keep this file in sync as code lands.
+All tested. Still to come: further Planfix resources as needed (e.g. `datatag`, `directory`, `file` — `file` is currently blocked by API token scope). Keep this file in sync as code lands.
 
 ## Project rules
 
@@ -29,7 +30,7 @@ All tested. Still to come: the remaining Planfix resources. Keep this file in sy
 
 Implemented:
 - `main.go` — thin entry point (`cmd.Execute`).
-- `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`, `task/` (`list`, `view`, `create`, `update`, and the `comment` sub-group), `project/` (`list`, `view`, `create`, `update`), `contact/` (`list`, `view`, `create`, `update`), `user/` (`list`, `view` — read-only), `report/` (`list`, `view` — read-only).
+- `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`, `task/` (`list`, `view`, `create`, `update`, and the `comment` sub-group), `project/` (`list`, `view`, `create`, `update`), `contact/` (`list`, `view`, `create`, `update`), `user/` (`list`, `view` — read-only), `report/` (`list`, `view` — read-only), `config/` (`list`, `use`, `show` — local profile management). The data package `internal/config` is imported as `pfconfig` inside `internal/cmd/config` to avoid the package-name collision.
 - `internal/cmdutil/` — `GlobalOpts` (persistent flags), the `Client()`/`ClientFunc()` helpers that build a configured client from the active profile, and the resource-agnostic command helpers shared by every typed command (`FieldsCSV`, `ValidateID`, `DecodeJSON`).
 - `internal/planfix/` — Planfix REST client. A low-level `Client.Do(ctx, method, path, body, headers)` carries auth, throttling, and retries; `Client.JSON(ctx, method, path, body)` is the typed-command convenience over it (marshals the body, returns raw response bytes, maps status ≥300 to `*APIError`). `errors.go` holds `APIError` (incl. the Planfix app `Code`)/`ParseError`.
 - `internal/output/` — renders decoded JSON: `Table`/`Detail` via `text/tabwriter`, a dot-path `Flatten` (e.g. `status.name`; an object with no `name` falls back to its `id`), `ColumnsFor` (default vs `--fields`-derived columns), rune-safe `Truncate`, and `JSON` (pretty-print/raw passthrough — shared with `api`).
@@ -37,7 +38,7 @@ Implemented:
 - `internal/buildinfo/` — version/commit/date injected at build time.
 
 Planned (not yet present):
-- `internal/cmd/config/`, and further typed resources.
+- Further typed resources as needed (`datatag`, `directory`, `file`).
 
 ## Build order
 
@@ -47,7 +48,8 @@ Planned (not yet present):
 4. **Done (M4):** `contact` — list, view, create, update (people + companies).
 5. **Done (M5):** `user` — list, view (read-only).
 6. **Done (M6):** `report` — list, view (read-only).
-7. **Next:** profile-management helper (`config`) and any remaining viable resources.
+7. **Done (M7):** `config` — list, use, show (local profile management).
+8. **Next:** remaining viable resources as needed (`datatag`/`directory`; `file` is token-scope blocked).
 
 ## Conventions
 

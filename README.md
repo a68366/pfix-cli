@@ -186,6 +186,14 @@ profiles:
 
 Choose a profile per command with `--profile staging` or `PFIX_PROFILE=staging`. Resolution precedence is **flags > environment > config file**; the environment variables are `PFIX_DOMAIN`, `PFIX_TOKEN`, `PFIX_PROFILE`, and `PFIX_CONFIG` (overrides the config file path).
 
+Manage profiles without editing the file by hand:
+
+```sh
+pfix config list            # table of profiles; * marks the active one
+pfix config show            # active profile's domain + masked token (or: config show <name>)
+pfix config use staging     # set the active profile (current_profile)
+```
+
 ## Roadmap
 
 - Further typed resources beyond `task` and `project`.
