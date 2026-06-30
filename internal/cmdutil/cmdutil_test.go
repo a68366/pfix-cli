@@ -135,6 +135,16 @@ func TestApplyFilter(t *testing.T) {
 			t.Fatalf("filters = %#v", b["filters"])
 		}
 	})
+	t.Run("valid object", func(t *testing.T) {
+		b := map[string]any{}
+		if err := ApplyFilter(b, `{"a":1}`); err != nil {
+			t.Fatal(err)
+		}
+		obj, ok := b["filters"].(map[string]any)
+		if !ok || obj["a"] != float64(1) {
+			t.Fatalf("filters = %#v", b["filters"])
+		}
+	})
 	t.Run("invalid json errors", func(t *testing.T) {
 		b := map[string]any{}
 		err := ApplyFilter(b, "not json")
