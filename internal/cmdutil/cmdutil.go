@@ -33,6 +33,9 @@ func ValidateID(idStr string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("id must be a number, got %q", idStr)
 	}
+	if id <= 0 {
+		return 0, fmt.Errorf("id must be a positive number, got %d", id)
+	}
 	return id, nil
 }
 

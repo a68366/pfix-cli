@@ -37,6 +37,8 @@ func TestValidateID(t *testing.T) {
 		{name: "non-numeric", input: "abc", wantErr: "number"},
 		{name: "empty string", input: "", wantErr: "number"},
 		{name: "float", input: "1.5", wantErr: "number"},
+		{name: "zero", input: "0", wantErr: "positive"},
+		{name: "negative", input: "-5", wantErr: "positive"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
