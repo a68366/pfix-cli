@@ -257,7 +257,7 @@ gofmt -l .           # formatting check (prints nothing when clean)
 go build -o pfix .   # build the binary
 ```
 
-See [`CLAUDE.md`](CLAUDE.md) for architecture and conventions.
+See [`AGENTS.md`](AGENTS.md) for architecture and conventions.
 
 ## License
 
