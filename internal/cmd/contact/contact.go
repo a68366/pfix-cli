@@ -12,6 +12,6 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Use:   "contact",
 		Short: "Work with Planfix contacts",
 	}
-	cmd.AddCommand(newListCmd(g), newViewCmd(g))
+	cmd.AddCommand(newListCmd(g), newViewCmd(g), newCreateCmd(g), newUpdateCmd(g))
 	return cmd
 }
