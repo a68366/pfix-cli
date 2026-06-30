@@ -2,7 +2,7 @@
 
 A command-line client for the [Planfix](https://planfix.com) REST API, written in Go. It ships as a single self-contained binary and is built for two audiences: people working in a terminal, and automation or AI agents that consume machine-readable output.
 
-> **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), profile management (`config`), and the typed `task`, `project`, `contact`, `user`, `report`, `datatag`, `template`, and `customfield` commands (with human-readable table output) are implemented. Further typed resources are on the [roadmap](#roadmap).
+> **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), profile management (`config`), and the typed `task`, `project`, `contact`, `user`, `report`, `datatag`, `template`, `customfield`, and `object` commands (with human-readable table output) are implemented. Further typed resources are on the [roadmap](#roadmap).
 
 ## Install
 
@@ -145,6 +145,15 @@ List the templates available for an object type (read-only):
 pfix template list task         # task templates
 pfix template list contact      # contact templates (people + companies)
 pfix template list project
+```
+
+### Objects
+
+Planfix objects, read-only:
+
+```sh
+pfix object list            # table; --limit / --offset page
+pfix object view 1          # detail block (--json for everything)
 ```
 
 ### Custom fields
