@@ -59,6 +59,17 @@ command:
 | `--fields a,b,c` | Override which Planfix fields are requested and shown as columns (defaults are per-command) |
 | `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`/`comment add`) |
 
+**Filtering lists.** The `list` commands for `task`, `project`, `contact`, `user`,
+`report`, `datatag`, and `object` accept `--filter <json>` — a raw Planfix filters
+array forwarded to the API:
+
+```sh
+pfix task list --filter '[{"type":51,"operator":"equal","value":42}]'
+```
+
+Filter `type` codes are Planfix-specific; see the Planfix REST filter reference for
+the available types and operators.
+
 ### Tasks
 
 ```sh
