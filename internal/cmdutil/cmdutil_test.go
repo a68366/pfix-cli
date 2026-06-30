@@ -83,6 +83,38 @@ func TestFieldsCSV(t *testing.T) {
 	}
 }
 
+func TestValidateObjectType(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr string
+	}{
+		{name: "task", input: "task"},
+		{name: "project", input: "project"},
+		{name: "empty", input: "", wantErr: "required"},
+		{name: "uppercase Task", input: "Task", wantErr: "lowercase"},
+		{name: "alphanumeric", input: "a1", wantErr: "lowercase"},
+		{name: "with space", input: "a b", wantErr: "lowercase"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateObjectType(tt.input)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("ValidateObjectType(%q) expected error containing %q, got nil", tt.input, tt.wantErr)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("ValidateObjectType(%q) error = %q, want it to contain %q", tt.input, err.Error(), tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ValidateObjectType(%q) unexpected error: %v", tt.input, err)
+			}
+		})
+	}
+}
+
 func TestDecodeJSON(t *testing.T) {
 	t.Run("invalid JSON returns decode response error", func(t *testing.T) {
 		var x map[string]any

@@ -47,6 +47,20 @@ func DecodeJSON(b []byte, v any) error {
 	return nil
 }
 
+// ValidateObjectType checks an object-type path segment (e.g. "task"): non-empty,
+// lowercase ASCII letters only. Returns a clear error otherwise.
+func ValidateObjectType(t string) error {
+	if t == "" {
+		return fmt.Errorf("object type is required (e.g. task, project, contact)")
+	}
+	for _, r := range t {
+		if r < 'a' || r > 'z' {
+			return fmt.Errorf("invalid object type %q: use lowercase letters (e.g. task, project, contact)", t)
+		}
+	}
+	return nil
+}
+
 // MaskToken renders a token as **** plus its last 4 chars (or just **** when short).
 func MaskToken(t string) string {
 	if len(t) <= 4 {
