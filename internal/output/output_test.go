@@ -8,10 +8,12 @@ import (
 
 func TestFlatten(t *testing.T) {
 	row := map[string]any{
-		"id":       float64(15), // json numbers decode to float64
-		"name":     "Task A",
-		"status":   map[string]any{"id": float64(1), "name": "New"},
-		"dateTime": map[string]any{"datetime": "2026-06-29T21:46Z"},
+		"id":         float64(15), // json numbers decode to float64
+		"name":       "Task A",
+		"status":     map[string]any{"id": float64(1), "name": "New"},
+		"thinStatus": map[string]any{"id": float64(2)},
+		"strIDObj":   map[string]any{"id": "user:1"},
+		"dateTime":   map[string]any{"datetime": "2026-06-29T21:46Z"},
 		"assignees": []any{
 			map[string]any{"name": "Ann"},
 			map[string]any{"name": "Bob"},
@@ -22,7 +24,9 @@ func TestFlatten(t *testing.T) {
 		"id":                "15",
 		"name":              "Task A",
 		"status.name":       "New",
-		"status":            "New", // object with name → name
+		"status":            "New",    // object with name → name
+		"thinStatus":        "2",      // object with only id → id fallback
+		"strIDObj":          "user:1", // object with string id → id fallback
 		"dateTime.datetime": "2026-06-29T21:46Z",
 		"assignees":         "Ann, Bob", // array of objects → join names
 		"tags":              "x, y",     // array of scalars → join

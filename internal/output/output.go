@@ -52,6 +52,9 @@ func render(v any) string {
 		if name, ok := t["name"].(string); ok {
 			return name
 		}
+		if id, ok := t["id"]; ok {
+			return render(id)
+		}
 		return ""
 	case []any:
 		parts := make([]string, 0, len(t))
