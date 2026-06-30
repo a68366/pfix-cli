@@ -7,6 +7,7 @@ import (
 	"github.com/a68366/pfix-cli/internal/cmd/auth"
 	"github.com/a68366/pfix-cli/internal/cmd/config"
 	"github.com/a68366/pfix-cli/internal/cmd/contact"
+	"github.com/a68366/pfix-cli/internal/cmd/customfield"
 	"github.com/a68366/pfix-cli/internal/cmd/datatag"
 	"github.com/a68366/pfix-cli/internal/cmd/project"
 	"github.com/a68366/pfix-cli/internal/cmd/report"
@@ -45,6 +46,7 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(datatag.NewCmd(g))
 	root.AddCommand(report.NewCmd(g))
 	root.AddCommand(template.NewCmd(g))
+	root.AddCommand(customfield.NewCmd(g))
 
 	return root
 }
