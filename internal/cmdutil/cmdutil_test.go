@@ -5,6 +5,27 @@ import (
 	"testing"
 )
 
+func TestMaskToken(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"", "****"},
+		{"abc", "****"},
+		{"abcd", "****"},
+		{"abcde", "****bcde"},
+		{"1234567890", "****7890"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := MaskToken(tt.input)
+			if got != tt.want {
+				t.Errorf("MaskToken(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestValidateID(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/a68366/pfix-cli/internal/cmdutil"
 	"github.com/a68366/pfix-cli/internal/config"
 )
 
@@ -80,10 +81,10 @@ func TestRunLoginRespectsPFIXPROFILE(t *testing.T) {
 }
 
 func TestMaskToken(t *testing.T) {
-	if got := maskToken("abcdef"); got != "****cdef" {
-		t.Errorf("maskToken = %q", got)
+	if got := cmdutil.MaskToken("abcdef"); got != "****cdef" {
+		t.Errorf("MaskToken = %q", got)
 	}
-	if got := maskToken("ab"); got != "****" {
-		t.Errorf("maskToken short = %q", got)
+	if got := cmdutil.MaskToken("ab"); got != "****" {
+		t.Errorf("MaskToken short = %q", got)
 	}
 }

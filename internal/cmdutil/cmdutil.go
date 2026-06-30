@@ -44,6 +44,14 @@ func DecodeJSON(b []byte, v any) error {
 	return nil
 }
 
+// MaskToken renders a token as **** plus its last 4 chars (or just **** when short).
+func MaskToken(t string) string {
+	if len(t) <= 4 {
+		return "****"
+	}
+	return "****" + t[len(t)-4:]
+}
+
 // ClientFunc returns a zero-argument func that builds and returns a configured
 // Planfix client. It is used to defer client construction until a command runs.
 func (g *GlobalOpts) ClientFunc() func() (*planfix.Client, error) {

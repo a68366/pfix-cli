@@ -23,7 +23,7 @@ func newStatusCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "Profile: %s\n", res.ProfileName)
 			fmt.Fprintf(out, "Domain:  %s\n", res.Domain)
-			fmt.Fprintf(out, "Token:   %s\n", maskToken(res.Token))
+			fmt.Fprintf(out, "Token:   %s\n", cmdutil.MaskToken(res.Token))
 
 			resp, err := client.Do(cmd.Context(), "POST", "task/list", []byte(`{"pageSize":1}`), nil)
 			if err != nil {
@@ -38,11 +38,4 @@ func newStatusCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return planfix.ParseError(resp.StatusCode, body)
 		},
 	}
-}
-
-func maskToken(t string) string {
-	if len(t) <= 4 {
-		return "****"
-	}
-	return "****" + t[len(t)-4:]
 }
