@@ -23,8 +23,10 @@ func NewRootCmd() *cobra.Command {
 	g := &cmdutil.GlobalOpts{}
 
 	root := &cobra.Command{
-		Use:           "pfix",
-		Short:         "Command-line client for the Planfix REST API",
+		Use:   "pfix",
+		Short: "Unofficial command-line client for the Planfix REST API",
+		Long: "pfix is an unofficial command-line client for the Planfix REST API.\n" +
+			"It is an independent open-source project, not affiliated with or endorsed by Planfix.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
