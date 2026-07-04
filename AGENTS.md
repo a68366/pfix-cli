@@ -82,6 +82,7 @@ Planned (not yet present):
 - Lint (optional, if installed): `golangci-lint run`.
 - Build: `go build -o pfix .`; release builds embed metadata via `-ldflags "-X github.com/a68366/pfix-cli/internal/buildinfo.Version=..."` (and `Commit`/`Date`).
 - CI: GitHub Actions — `.github/workflows/ci.yml` runs gofmt/vet/build/`go test -race`/tidy-check plus golangci-lint (config in `.golangci.yml`) on pushes to `main` and PRs; `.github/workflows/release.yml` + `.goreleaser.yml` publish multi-platform binaries to GitHub Releases on `v*` tags via GoReleaser.
+- Releasing: on a green `main`, create and push an annotated tag — `git tag -a vX.Y.Z -m "pfix vX.Y.Z" && git push origin vX.Y.Z`. The tag triggers the release workflow: GoReleaser builds linux/darwin/windows × amd64/arm64 archives (version/commit/date embedded via ldflags), writes `checksums.txt`, assembles the changelog from Conventional Commit subjects (`docs`/`test`/`chore`/`ci` types are excluded — pick commit types with the changelog in mind), and publishes the GitHub Release immediately (`draft: false` in `.goreleaser.yml`). Verify the Actions run and the Releases page; `go install github.com/a68366/pfix-cli@latest` resolves the new tag once the Go module proxy refreshes.
 
 ## Testing rules
 
