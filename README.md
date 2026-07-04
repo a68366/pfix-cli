@@ -59,14 +59,22 @@ pfix api task/1
 ## Usage
 
 Typed commands print a human-readable table (or a key/value detail block for a
-single item) by default. Three global flags shape the output of every typed
-command:
+single item) by default. A handful of global flags shape the output of every
+typed command:
 
 | Flag | Effect |
 |---|---|
 | `--json` | Emit the raw Planfix API response (pretty-printed) instead of a table — the machine-readable path |
+| `--jq '<expr>'` | Filter the JSON output through a jq expression, one result per line (implies `--json`) |
 | `--fields a,b,c` | Override which Planfix fields are requested and shown as columns (defaults are per-command) |
 | `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`/`comment add`) |
+
+**Reshaping JSON with `--jq`.** `--jq` runs a jq expression over the same JSON
+`--json` would print, so you don't need to pass both. A result that is a bare
+string prints raw and unquoted (pipe-friendly); any other result (object,
+array, number, bool, null) prints as compact JSON, one result per line. An
+invalid expression is rejected before any request is made. The jq engine is
+embedded in `pfix` — no external `jq` binary is required.
 
 **Filtering lists.** The `list` commands for `task`, `project`, `contact`, `user`,
 `report`, `datatag`, and `object` accept `--filter <json>` — a raw Planfix filters
@@ -103,10 +111,12 @@ pfix task list --fields id,name,status      # choose your own columns
 pfix task list --json                       # raw API response
 pfix task list --saved-filter :in           # apply a saved filter (see: pfix task filters)
 pfix task filters                           # list saved task filters
+pfix task list --jq '.tasks[].name'         # just the names, one per line
 
 # View one task (detail block, or --json for everything)
 pfix task view 17
 pfix task view 17 --json
+pfix task view 17 --jq '.task.status.name'  # a single value, unquoted
 
 # Create a task (--name required); prints the new id
 pfix task create --name "Deploy release" --description "ship it"
