@@ -43,6 +43,11 @@ pfix auth status     # show the active profile and check the token
 pfix auth logout     # remove a profile's credentials
 ```
 
+Check connectivity and that the active token is accepted with `pfix ping` — it prints
+`OK` on success (`--json` for the raw response, `-q` to print nothing and just set the
+exit code) and exits non-zero if the token is rejected. It is the lightest such check;
+`pfix auth status` uses the same `GET /ping` probe to validate the token.
+
 For CI and automation, skip the config file and pass credentials via the environment:
 
 ```sh

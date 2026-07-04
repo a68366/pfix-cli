@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -152,4 +153,22 @@ func ParseTimePoint(s string) (map[string]any, error) {
 		}
 	}
 	return nil, fmt.Errorf(`invalid date %q: use YYYY-MM-DD, "YYYY-MM-DD HH:MM", or YYYY-MM-DDTHH:MM`, s)
+}
+
+// DescribeAPIError augments a Planfix *APIError with an actionable hint for the
+// two common auth failures: an unknown token (app code 1) versus a valid token
+// that lacks the scope for the requested action (app code 5). Any other error —
+// including a nil error or a non-APIError — is returned unchanged.
+func DescribeAPIError(err error) error {
+	var apiErr *planfix.APIError
+	if !errors.As(err, &apiErr) {
+		return err
+	}
+	switch apiErr.Code {
+	case 1:
+		return fmt.Errorf("%w — the token was rejected; run `pfix auth login` to re-authenticate", err)
+	case 5:
+		return fmt.Errorf("%w — the token is valid but lacks the scope for this action", err)
+	}
+	return err
 }

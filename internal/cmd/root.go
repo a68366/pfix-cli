@@ -39,6 +39,7 @@ func NewRootCmd() *cobra.Command {
 	pf.BoolVarP(&g.Quiet, "quiet", "q", false, "Suppress non-essential output")
 
 	root.AddCommand(newVersionCmd())
+	root.AddCommand(newPingCmd(g))
 	root.AddCommand(auth.NewCmd(g))
 	root.AddCommand(api.NewCmd(g))
 	root.AddCommand(config.NewCmd(g))

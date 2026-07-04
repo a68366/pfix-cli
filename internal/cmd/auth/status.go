@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -9,6 +10,14 @@ import (
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
+
+type statusOptions struct {
+	profileName string
+	domain      string
+	token       string
+	client      func() (*planfix.Client, error)
+	out         io.Writer
+}
 
 func newStatusCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	return &cobra.Command{
@@ -20,22 +29,34 @@ func newStatusCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, "Profile: %s\n", res.ProfileName)
-			fmt.Fprintf(out, "Domain:  %s\n", res.Domain)
-			fmt.Fprintf(out, "Token:   %s\n", cmdutil.MaskToken(res.Token))
-
-			resp, err := client.Do(cmd.Context(), "POST", "task/list", []byte(`{"pageSize":1}`), nil)
-			if err != nil {
-				return err
+			o := &statusOptions{
+				profileName: res.ProfileName,
+				domain:      res.Domain,
+				token:       res.Token,
+				client:      func() (*planfix.Client, error) { return client, nil },
+				out:         cmd.OutOrStdout(),
 			}
-			defer resp.Body.Close()
-			body, _ := io.ReadAll(resp.Body)
-			if resp.StatusCode == 200 {
-				fmt.Fprintln(out, "Status:  valid")
-				return nil
-			}
-			return planfix.ParseError(resp.StatusCode, body)
+			return runStatus(cmd.Context(), o)
 		},
 	}
+}
+
+// runStatus prints the active profile and confirms the token by probing
+// GET /ping — the lightest call that validates a token independent of any
+// resource scope. (A task/list probe would fail for a valid token scoped only
+// to, say, contacts, falsely reporting the token as bad.)
+func runStatus(ctx context.Context, o *statusOptions) error {
+	fmt.Fprintf(o.out, "Profile: %s\n", o.profileName)
+	fmt.Fprintf(o.out, "Domain:  %s\n", o.domain)
+	fmt.Fprintf(o.out, "Token:   %s\n", cmdutil.MaskToken(o.token))
+
+	client, err := o.client()
+	if err != nil {
+		return err
+	}
+	if _, err := client.JSON(ctx, "GET", "ping", nil); err != nil {
+		return cmdutil.DescribeAPIError(err)
+	}
+	fmt.Fprintln(o.out, "Status:  valid")
+	return nil
 }
