@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/a68366/pfix-cli/internal/config"
 	"github.com/a68366/pfix-cli/internal/planfix"
@@ -108,4 +109,30 @@ func (g *GlobalOpts) Client() (*planfix.Client, config.Resolved, error) {
 		return nil, res, err
 	}
 	return planfix.New(res.Domain, res.Token), res, nil
+}
+
+// ParsePeople converts prefixed people references (user:N, contact:N, group:N)
+// into the Planfix people-list shape:
+// {"users": [{"id": "user:N"}, ...], "groups": [{"id": N}, ...]}.
+// user: and contact: refs keep their string form in "users"; group: refs
+// become int ids in "groups". Order is preserved; values are not deduplicated.
+func ParsePeople(refs []string) (map[string]any, error) {
+	users := []any{}
+	groups := []any{}
+	for _, ref := range refs {
+		kind, num, found := strings.Cut(ref, ":")
+		if !found || (kind != "user" && kind != "contact" && kind != "group") {
+			return nil, fmt.Errorf("invalid people reference %q: use user:N, contact:N, or group:N", ref)
+		}
+		id, err := strconv.Atoi(num)
+		if err != nil || id <= 0 {
+			return nil, fmt.Errorf("invalid people reference %q: id must be a positive number", ref)
+		}
+		if kind == "group" {
+			groups = append(groups, map[string]any{"id": id})
+		} else {
+			users = append(users, map[string]any{"id": ref})
+		}
+	}
+	return map[string]any{"users": users, "groups": groups}, nil
 }

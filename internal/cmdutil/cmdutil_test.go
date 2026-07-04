@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -182,4 +183,77 @@ func TestDecodeJSON(t *testing.T) {
 			t.Errorf("decoded %+v, want name=test id=42", v)
 		}
 	})
+}
+
+func TestParsePeople(t *testing.T) {
+	tests := []struct {
+		name       string
+		refs       []string
+		wantUsers  []any
+		wantGroups []any
+		wantErr    string
+	}{
+		{
+			name:       "single user",
+			refs:       []string{"user:1"},
+			wantUsers:  []any{map[string]any{"id": "user:1"}},
+			wantGroups: []any{},
+		},
+		{
+			name:       "single contact",
+			refs:       []string{"contact:4"},
+			wantUsers:  []any{map[string]any{"id": "contact:4"}},
+			wantGroups: []any{},
+		},
+		{
+			name:       "single group",
+			refs:       []string{"group:3"},
+			wantUsers:  []any{},
+			wantGroups: []any{map[string]any{"id": 3}},
+		},
+		{
+			name: "mixed refs preserve order",
+			refs: []string{"user:1", "contact:4", "group:3", "user:2"},
+			wantUsers: []any{
+				map[string]any{"id": "user:1"},
+				map[string]any{"id": "contact:4"},
+				map[string]any{"id": "user:2"},
+			},
+			wantGroups: []any{map[string]any{"id": 3}},
+		},
+		{
+			name:       "empty input yields empty lists",
+			refs:       nil,
+			wantUsers:  []any{},
+			wantGroups: []any{},
+		},
+		{name: "bare number", refs: []string{"12"}, wantErr: "invalid people reference"},
+		{name: "unknown prefix", refs: []string{"team:3"}, wantErr: "invalid people reference"},
+		{name: "empty ref", refs: []string{""}, wantErr: "invalid people reference"},
+		{name: "missing id", refs: []string{"user:"}, wantErr: "positive"},
+		{name: "non-numeric id", refs: []string{"user:abc"}, wantErr: "positive"},
+		{name: "zero id", refs: []string{"user:0"}, wantErr: "positive"},
+		{name: "negative group id", refs: []string{"group:-1"}, wantErr: "positive"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParsePeople(tt.refs)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("ParsePeople(%v) expected error containing %q, got nil", tt.refs, tt.wantErr)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("ParsePeople(%v) error = %q, want it to contain %q", tt.refs, err.Error(), tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ParsePeople(%v) unexpected error: %v", tt.refs, err)
+			}
+			want := map[string]any{"users": tt.wantUsers, "groups": tt.wantGroups}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("ParsePeople(%v) = %#v, want %#v", tt.refs, got, want)
+			}
+		})
+	}
 }
