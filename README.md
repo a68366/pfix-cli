@@ -113,8 +113,8 @@ Notes:
 - `--assignees`/`--auditors`/`--participants` take comma-separated prefixed
   references — `user:N`, `contact:N`, or `group:N`. On `update` the list you
   pass **replaces** the stored one.
-- `--start-date`/`--end-date` accept `YYYY-MM-DD` or `"YYYY-MM-DD HH:MM"`;
-  Planfix interprets the time in the account's timezone.
+- `--start-date`/`--end-date` accept `YYYY-MM-DD`, `"YYYY-MM-DD HH:MM"`, or
+  `YYYY-MM-DDTHH:MM`; Planfix interprets the time in the account's timezone.
 - `--priority` is `Urgent` or `NotUrgent` (validated locally — the API would
   silently fall back to `NotUrgent` on anything else).
 - `--counterparty` takes a contact id or `contact:N`. `--template` exists only
