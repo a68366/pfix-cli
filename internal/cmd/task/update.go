@@ -24,7 +24,7 @@ type updateOptions struct {
 
 func newUpdateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	var name, description string
-	var status int
+	f := &taskFields{}
 	cmd := &cobra.Command{
 		Use:   "update <id>",
 		Short: "Update a task",
@@ -34,15 +34,9 @@ func newUpdateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			body := map[string]any{}
-			if cmd.Flags().Changed("name") {
-				body["name"] = name
-			}
-			if cmd.Flags().Changed("description") {
-				body["description"] = description
-			}
-			if cmd.Flags().Changed("status") {
-				body["status"] = map[string]any{"id": status}
+			body, err := updateBody(name, description, f, cmd.Flags().Changed)
+			if err != nil {
+				return err
 			}
 			o := &updateOptions{
 				id:     id,
@@ -57,13 +51,29 @@ func newUpdateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&name, "name", "", "Task name")
 	cmd.Flags().StringVar(&description, "description", "", "Task description")
-	cmd.Flags().IntVar(&status, "status", 0, "Status ID")
+	f.register(cmd, false)
 	return cmd
+}
+
+// updateBody assembles the update request body from every flag reported
+// set by changed.
+func updateBody(name, description string, f *taskFields, changed func(string) bool) (map[string]any, error) {
+	body := map[string]any{}
+	if changed("name") {
+		body["name"] = name
+	}
+	if changed("description") {
+		body["description"] = description
+	}
+	if err := f.apply(body, changed); err != nil {
+		return nil, err
+	}
+	return body, nil
 }
 
 func runUpdate(ctx context.Context, o *updateOptions) error {
 	if len(o.body) == 0 {
-		return fmt.Errorf("at least one of --name, --description, or --status is required")
+		return fmt.Errorf("at least one field flag is required (see --help)")
 	}
 
 	client, err := o.client()
