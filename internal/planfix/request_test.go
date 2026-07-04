@@ -34,7 +34,7 @@ func TestJSON_SuccessReturnsRawBytes(t *testing.T) {
 		t.Fatalf("method/path = %s %s", gotMethod, gotPath)
 	}
 	var sent map[string]any
-	if json.Unmarshal(gotBody, &sent); sent["name"] != "x" {
+	if err := json.Unmarshal(gotBody, &sent); err != nil || sent["name"] != "x" {
 		t.Fatalf("body not marshaled: %s", gotBody)
 	}
 	if string(raw) != `{"result":"success","id":7}` {
