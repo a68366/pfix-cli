@@ -10,28 +10,32 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+
+	"github.com/a68366/pfix-cli/internal/buildinfo"
 )
 
 // Client is a thin Planfix REST transport: auth, throttle, retry.
 type Client struct {
-	Domain  string
-	Token   string
-	BaseURL string // overrides https://<domain>/rest (used in tests)
-	HTTP    *http.Client
-	Limiter *rate.Limiter
-	Retries int
-	Backoff func(attempt int) time.Duration
+	Domain    string
+	Token     string
+	BaseURL   string // overrides https://<domain>/rest (used in tests)
+	HTTP      *http.Client
+	Limiter   *rate.Limiter
+	Retries   int
+	Backoff   func(attempt int) time.Duration
+	UserAgent string // sent as the User-Agent header unless a caller overrides it
 }
 
 // New returns a Client with sane defaults (~5 req/s, 3 attempts).
 func New(domain, token string) *Client {
 	return &Client{
-		Domain:  domain,
-		Token:   token,
-		HTTP:    &http.Client{Timeout: 30 * time.Second},
-		Limiter: rate.NewLimiter(rate.Limit(5), 1),
-		Retries: 3,
-		Backoff: defaultBackoff,
+		Domain:    domain,
+		Token:     token,
+		HTTP:      &http.Client{Timeout: 30 * time.Second},
+		Limiter:   rate.NewLimiter(rate.Limit(5), 1),
+		Retries:   3,
+		Backoff:   defaultBackoff,
+		UserAgent: "pfix/" + buildinfo.Version,
 	}
 }
 
@@ -72,6 +76,9 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte, heade
 		req.Header.Set("Authorization", "Bearer "+c.Token)
 		if len(body) > 0 {
 			req.Header.Set("Content-Type", "application/json")
+		}
+		if c.UserAgent != "" {
+			req.Header.Set("User-Agent", c.UserAgent)
 		}
 		for k, v := range headers {
 			req.Header.Set(k, v)

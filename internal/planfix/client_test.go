@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/time/rate"
 
+	"github.com/a68366/pfix-cli/internal/buildinfo"
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
@@ -41,6 +42,43 @@ func TestDoSetsAuthHeaderAndPath(t *testing.T) {
 	}
 	if gotPath != "/task/123" {
 		t.Errorf("path = %q", gotPath)
+	}
+}
+
+func TestDoSetsDefaultUserAgent(t *testing.T) {
+	var gotUA string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUA = r.Header.Get("User-Agent")
+		io.WriteString(w, `{}`)
+	}))
+	defer srv.Close()
+
+	resp, err := fastClient(srv.URL).Do(context.Background(), "GET", "task/1", nil, nil)
+	if err != nil {
+		t.Fatalf("Do: %v", err)
+	}
+	resp.Body.Close()
+	if want := "pfix/" + buildinfo.Version; gotUA != want {
+		t.Errorf("User-Agent = %q, want %q", gotUA, want)
+	}
+}
+
+func TestDoUserAgentOverrideWins(t *testing.T) {
+	var gotUA string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUA = r.Header.Get("User-Agent")
+		io.WriteString(w, `{}`)
+	}))
+	defer srv.Close()
+
+	headers := map[string]string{"User-Agent": "custom/1.0"}
+	resp, err := fastClient(srv.URL).Do(context.Background(), "GET", "task/1", nil, headers)
+	if err != nil {
+		t.Fatalf("Do: %v", err)
+	}
+	resp.Body.Close()
+	if gotUA != "custom/1.0" {
+		t.Errorf("User-Agent = %q, want caller override %q", gotUA, "custom/1.0")
 	}
 }
 
