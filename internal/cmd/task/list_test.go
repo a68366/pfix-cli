@@ -79,6 +79,28 @@ func TestRunListJSON(t *testing.T) {
 	}
 }
 
+func TestRunListJQFilter(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","tasks":[{"id":1},{"id":2}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &listOptions{
+		limit:  100,
+		json:   true,
+		jq:     ".tasks[].id",
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	if err := runList(context.Background(), o); err != nil {
+		t.Fatalf("runList: %v", err)
+	}
+	if out.String() != "1\n2\n" {
+		t.Errorf("output = %q, want %q", out.String(), "1\n2\n")
+	}
+}
+
 func TestRunListCustomLimit(t *testing.T) {
 	var gotBody string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

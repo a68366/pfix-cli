@@ -15,6 +15,7 @@ import (
 type pingOptions struct {
 	json   bool
 	quiet  bool
+	jq     string
 	client func() (*planfix.Client, error)
 	out    io.Writer
 }
@@ -32,6 +33,7 @@ func newPingCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			o.json = g.JSON
 			o.quiet = g.Quiet
+			o.jq = g.JQ
 			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runPing(cmd.Context(), o)
@@ -53,7 +55,7 @@ func runPing(ctx context.Context, o *pingOptions) error {
 		return nil
 	}
 	if o.json {
-		return output.JSON(o.out, raw)
+		return output.EmitJSON(o.out, raw, o.jq)
 	}
 	fmt.Fprintln(o.out, "OK")
 	return nil

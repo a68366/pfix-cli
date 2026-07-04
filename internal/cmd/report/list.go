@@ -24,6 +24,7 @@ type listOptions struct {
 	fields        string
 	quiet         bool
 	filter        string
+	jq            string
 	client        func() (*planfix.Client, error)
 	out           io.Writer
 }
@@ -38,6 +39,7 @@ func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			o.json = g.JSON
 			o.fields = g.Fields
 			o.quiet = g.Quiet
+			o.jq = g.JQ
 			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runList(cmd.Context(), o)
@@ -68,7 +70,7 @@ func runList(ctx context.Context, o *listOptions) error {
 		return err
 	}
 	if o.json {
-		return output.JSON(o.out, raw)
+		return output.EmitJSON(o.out, raw, o.jq)
 	}
 	var env struct {
 		Reports []map[string]any `json:"reports"`

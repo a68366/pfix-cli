@@ -17,6 +17,7 @@ type createOptions struct {
 	description string
 	json        bool
 	quiet       bool
+	jq          string
 	client      func() (*planfix.Client, error)
 	out         io.Writer
 }
@@ -30,6 +31,7 @@ func newCreateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			o.json = g.JSON
 			o.quiet = g.Quiet
+			o.jq = g.JQ
 			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runCreate(cmd.Context(), o)
@@ -58,7 +60,7 @@ func runCreate(ctx context.Context, o *createOptions) error {
 		return err
 	}
 	if o.json {
-		return output.JSON(o.out, raw)
+		return output.EmitJSON(o.out, raw, o.jq)
 	}
 
 	var resp struct {

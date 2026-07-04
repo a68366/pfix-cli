@@ -49,6 +49,23 @@ func TestRunAPIDefaultsToGet(t *testing.T) {
 	}
 }
 
+func TestRunAPIJQFilter(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success"}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := optsFor(srv.URL, nil, out)
+	o.jq = ".result"
+	if err := runAPI(context.Background(), o, "ping"); err != nil {
+		t.Fatalf("runAPI: %v", err)
+	}
+	if out.String() != "success\n" {
+		t.Errorf("output = %q, want %q", out.String(), "success\n")
+	}
+}
+
 func TestRunAPIPostsFieldsAsJSON(t *testing.T) {
 	var gotMethod, gotBody string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

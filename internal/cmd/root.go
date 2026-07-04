@@ -37,6 +37,11 @@ func NewRootCmd() *cobra.Command {
 	pf.BoolVar(&g.JSON, "json", false, "Emit raw JSON from the API instead of a table")
 	pf.StringVar(&g.Fields, "fields", "", "Comma-separated fields to request (overrides defaults)")
 	pf.BoolVarP(&g.Quiet, "quiet", "q", false, "Suppress non-essential output")
+	pf.StringVar(&g.JQ, "jq", "", "Filter JSON output with a jq expression.")
+
+	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		return g.PreRun()
+	}
 
 	root.AddCommand(newVersionCmd())
 	root.AddCommand(newPingCmd(g))

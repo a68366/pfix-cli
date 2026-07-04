@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/a68366/pfix-cli/internal/config"
+	"github.com/a68366/pfix-cli/internal/output"
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
@@ -20,6 +21,21 @@ type GlobalOpts struct {
 	JSON    bool
 	Fields  string
 	Quiet   bool
+	JQ      string
+}
+
+// PreRun applies global-flag interactions before a command runs. A non-empty
+// --jq turns on JSON output and is validated up front, so an invalid
+// expression fails before any API call is made.
+func (g *GlobalOpts) PreRun() error {
+	if g.JQ == "" {
+		return nil
+	}
+	g.JSON = true
+	if _, err := output.CompileJQ(g.JQ); err != nil {
+		return err
+	}
+	return nil
 }
 
 // FieldsCSV returns override if non-empty, otherwise returns def.

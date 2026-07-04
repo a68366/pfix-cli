@@ -27,6 +27,7 @@ type apiOptions struct {
 	inputFile string   // --input
 	include   bool     // -i
 	silent    bool
+	jq        string
 
 	client func() (*planfix.Client, error)
 	in     io.Reader
@@ -51,6 +52,7 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			}
 			o.in = cmd.InOrStdin()
 			o.out = cmd.OutOrStdout()
+			o.jq = g.JQ
 			return runAPI(cmd.Context(), o, args[0])
 		},
 	}
@@ -123,7 +125,7 @@ func runAPI(ctx context.Context, o *apiOptions, path string) error {
 		return err
 	}
 	if !o.silent {
-		if err := output.JSON(o.out, data); err != nil {
+		if err := output.EmitJSON(o.out, data, o.jq); err != nil {
 			return err
 		}
 	}

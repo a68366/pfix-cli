@@ -29,6 +29,7 @@ type viewOptions struct {
 	json   bool
 	fields string
 	quiet  bool
+	jq     string
 	client func() (*planfix.Client, error)
 	out    io.Writer
 }
@@ -43,6 +44,7 @@ func newViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			o.json = g.JSON
 			o.fields = g.Fields
 			o.quiet = g.Quiet
+			o.jq = g.JQ
 			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runView(cmd.Context(), o, args[0])
@@ -67,7 +69,7 @@ func runView(ctx context.Context, o *viewOptions, idStr string) error {
 		return err
 	}
 	if o.json {
-		return output.JSON(o.out, raw)
+		return output.EmitJSON(o.out, raw, o.jq)
 	}
 	var env struct {
 		Project map[string]any `json:"project"`

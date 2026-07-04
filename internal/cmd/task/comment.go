@@ -40,6 +40,7 @@ type commentListOptions struct {
 	offset int
 	json   bool
 	quiet  bool
+	jq     string
 	client func() (*planfix.Client, error)
 	out    io.Writer
 }
@@ -58,6 +59,7 @@ func newCommentListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			o.id = id
 			o.json = g.JSON
 			o.quiet = g.Quiet
+			o.jq = g.JQ
 			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runCommentList(cmd.Context(), o)
@@ -84,7 +86,7 @@ func runCommentList(ctx context.Context, o *commentListOptions) error {
 		return err
 	}
 	if o.json {
-		return output.JSON(o.out, raw)
+		return output.EmitJSON(o.out, raw, o.jq)
 	}
 	var env struct {
 		Comments []map[string]any `json:"comments"`
@@ -110,6 +112,7 @@ type commentAddOptions struct {
 	body   string
 	json   bool
 	quiet  bool
+	jq     string
 	client func() (*planfix.Client, error)
 	out    io.Writer
 	in     io.Reader
@@ -129,6 +132,7 @@ func newCommentAddCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			o.id = id
 			o.json = g.JSON
 			o.quiet = g.Quiet
+			o.jq = g.JQ
 			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			o.in = cmd.InOrStdin()
@@ -162,7 +166,7 @@ func runCommentAdd(ctx context.Context, o *commentAddOptions) error {
 		return err
 	}
 	if o.json {
-		return output.JSON(o.out, raw)
+		return output.EmitJSON(o.out, raw, o.jq)
 	}
 
 	var resp struct {
