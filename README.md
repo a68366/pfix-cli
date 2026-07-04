@@ -1,14 +1,16 @@
 # pfix
 
+[![CI](https://github.com/a68366/pfix-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/a68366/pfix-cli/actions/workflows/ci.yml)
+
 A command-line client for the [Planfix](https://planfix.com) REST API, written in Go. It ships as a single self-contained binary and is built for two audiences: people working in a terminal, and automation or AI agents that consume machine-readable output.
 
 > **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), profile management (`config`), and the typed `task`, `project`, `contact`, `user`, `report`, `datatag`, `template`, `customfield`, and `object` commands (with human-readable table output) are implemented. Further typed resources are on the [roadmap](#roadmap).
 
 ## Install
 
-Requires Go 1.26 or newer.
+**Prebuilt binaries:** download the archive for your platform from the [Releases page](https://github.com/a68366/pfix-cli/releases), unpack it, and put `pfix` on your `PATH`.
 
-Build from source:
+**Build from source** (requires Go 1.26 or newer):
 
 ```sh
 git clone https://github.com/a68366/pfix-cli
@@ -246,7 +248,6 @@ pfix config use staging     # set the active profile (current_profile)
 
 - Further typed resources beyond `task` and `project`.
 - Richer list filtering (currently use `api` with a POST body for arbitrary filters).
-- Multi-platform release binaries.
 
 ## Development
 

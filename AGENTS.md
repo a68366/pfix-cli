@@ -80,6 +80,7 @@ Planned (not yet present):
 - Test: `go test ./...`. Table-driven tests; stand up a fake API with `net/http/httptest`; mock only at the HTTP boundary, never the code under test.
 - Lint (optional, if installed): `golangci-lint run`.
 - Build: `go build -o pfix .`; release builds embed metadata via `-ldflags "-X github.com/a68366/pfix-cli/internal/buildinfo.Version=..."` (and `Commit`/`Date`).
+- CI: GitHub Actions — `.github/workflows/ci.yml` runs gofmt/vet/build/`go test -race`/tidy-check plus golangci-lint (config in `.golangci.yml`) on pushes to `main` and PRs; `.github/workflows/release.yml` + `.goreleaser.yml` publish multi-platform binaries to GitHub Releases on `v*` tags via GoReleaser.
 
 ## Testing rules
 
