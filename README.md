@@ -6,7 +6,7 @@ An unofficial command-line client for the [Planfix](https://planfix.com) REST AP
 
 > **Unofficial.** pfix is an independent open-source project. It is **not** an official Planfix product and is not affiliated with, endorsed, sponsored, or funded by Planfix. The Planfix name is used only to describe the API this tool connects to.
 
-> **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), profile management (`config`), and the typed `task`, `project`, `contact`, `user`, `report`, `datatag`, `template`, `customfield`, and `object` commands (with human-readable table output) are implemented. Further typed resources are on the [roadmap](#roadmap).
+> **Status:** functional and actively developed. Typed commands cover tasks, projects, contacts, users, reports, data tags, templates, custom fields, and objects; anything not covered yet is reachable through the raw `api` passthrough (remaining work is on the [roadmap](#roadmap)). Command and flag conventions may still change before v1.0.
 
 ## Install
 
