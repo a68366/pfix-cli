@@ -13,47 +13,51 @@ import (
 )
 
 type createOptions struct {
-	name        string
-	description string
-	json        bool
-	quiet       bool
-	client      func() (*planfix.Client, error)
-	out         io.Writer
+	body   map[string]any
+	json   bool
+	quiet  bool
+	client func() (*planfix.Client, error)
+	out    io.Writer
 }
 
 func newCreateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
-	o := &createOptions{}
+	var name, description string
+	f := &taskFields{}
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a task",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			o.json = g.JSON
-			o.quiet = g.Quiet
-			o.client = g.ClientFunc()
-			o.out = cmd.OutOrStdout()
+			body := map[string]any{"name": name}
+			if description != "" {
+				body["description"] = description
+			}
+			if err := f.apply(body, cmd.Flags().Changed); err != nil {
+				return err
+			}
+			o := &createOptions{
+				body:   body,
+				json:   g.JSON,
+				quiet:  g.Quiet,
+				client: g.ClientFunc(),
+				out:    cmd.OutOrStdout(),
+			}
 			return runCreate(cmd.Context(), o)
 		},
 	}
-	cmd.Flags().StringVar(&o.name, "name", "", "Task name (required)")
-	cmd.Flags().StringVar(&o.description, "description", "", "Task description")
+	cmd.Flags().StringVar(&name, "name", "", "Task name (required)")
+	cmd.Flags().StringVar(&description, "description", "", "Task description")
+	f.register(cmd, true)
 	_ = cmd.MarkFlagRequired("name")
 	return cmd
 }
 
 func runCreate(ctx context.Context, o *createOptions) error {
-	body := map[string]any{
-		"name": o.name,
-	}
-	if o.description != "" {
-		body["description"] = o.description
-	}
-
 	client, err := o.client()
 	if err != nil {
 		return err
 	}
-	raw, err := client.JSON(ctx, "POST", "task/", body)
+	raw, err := client.JSON(ctx, "POST", "task/", o.body)
 	if err != nil {
 		return err
 	}
