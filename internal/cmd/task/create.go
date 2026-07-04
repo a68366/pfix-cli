@@ -28,11 +28,8 @@ func newCreateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Short: "Create a task",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			body := map[string]any{"name": name}
-			if description != "" {
-				body["description"] = description
-			}
-			if err := f.apply(body, cmd.Flags().Changed); err != nil {
+			body, err := createBody(name, description, f, cmd.Flags().Changed)
+			if err != nil {
 				return err
 			}
 			o := &createOptions{
@@ -50,6 +47,19 @@ func newCreateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	f.register(cmd, true)
 	_ = cmd.MarkFlagRequired("name")
 	return cmd
+}
+
+// createBody assembles the create request body: the required name, the
+// description when non-empty, and every field flag reported set by changed.
+func createBody(name, description string, f *taskFields, changed func(string) bool) (map[string]any, error) {
+	body := map[string]any{"name": name}
+	if description != "" {
+		body["description"] = description
+	}
+	if err := f.apply(body, changed); err != nil {
+		return nil, err
+	}
+	return body, nil
 }
 
 func runCreate(ctx context.Context, o *createOptions) error {

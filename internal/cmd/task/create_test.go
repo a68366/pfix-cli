@@ -6,8 +6,11 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 )
@@ -143,6 +146,55 @@ func TestRunCreateJSON(t *testing.T) {
 	if !strings.Contains(result, `"id"`) {
 		t.Errorf("json output missing id field: %q", result)
 	}
+}
+
+// TestCreateBodyFromCommandLine exercises the flags-to-body seam on the
+// success path: field flags parsed from a real command line (including
+// comma-split list flags) land in the body, and description is included
+// only when non-empty.
+func TestCreateBodyFromCommandLine(t *testing.T) {
+	t.Run("field flags land in the body, empty description omitted", func(t *testing.T) {
+		f := &taskFields{}
+		cmd := &cobra.Command{}
+		f.register(cmd, true)
+		args := []string{"--project", "21", "--assignees", "user:1,group:3", "--priority", "urgent", "--end-date", "2026-07-20"}
+		if err := cmd.Flags().Parse(args); err != nil {
+			t.Fatalf("Parse: %v", err)
+		}
+		body, err := createBody("Task", "", f, cmd.Flags().Changed)
+		if err != nil {
+			t.Fatalf("createBody: %v", err)
+		}
+		want := map[string]any{
+			"name":    "Task",
+			"project": map[string]any{"id": 21},
+			"assignees": map[string]any{
+				"users":  []any{map[string]any{"id": "user:1"}},
+				"groups": []any{map[string]any{"id": 3}},
+			},
+			"priority":    "Urgent",
+			"endDateTime": map[string]any{"date": "20-07-2026"},
+		}
+		if !reflect.DeepEqual(body, want) {
+			t.Errorf("body = %#v, want %#v", body, want)
+		}
+	})
+	t.Run("description included when non-empty, no field flags", func(t *testing.T) {
+		f := &taskFields{}
+		cmd := &cobra.Command{}
+		f.register(cmd, true)
+		if err := cmd.Flags().Parse(nil); err != nil {
+			t.Fatalf("Parse: %v", err)
+		}
+		body, err := createBody("Task", "some text", f, cmd.Flags().Changed)
+		if err != nil {
+			t.Fatalf("createBody: %v", err)
+		}
+		want := map[string]any{"name": "Task", "description": "some text"}
+		if !reflect.DeepEqual(body, want) {
+			t.Errorf("body = %#v, want %#v", body, want)
+		}
+	})
 }
 
 // TestCreateMissingName drives the Cobra command without --name and asserts the
