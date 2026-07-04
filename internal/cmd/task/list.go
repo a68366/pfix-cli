@@ -27,6 +27,7 @@ type listOptions struct {
 	fields        string
 	quiet         bool
 	filter        string
+	savedFilter   string
 	client        func() (*planfix.Client, error)
 	out           io.Writer
 }
@@ -49,6 +50,7 @@ func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	cmd.Flags().IntVar(&o.limit, "limit", 100, "Maximum tasks to return")
 	cmd.Flags().IntVar(&o.offset, "offset", 0, "Result offset (for paging)")
 	cmd.Flags().StringVar(&o.filter, "filter", "", "Filter results: a Planfix filters JSON array, e.g. '[{\"type\":51,\"operator\":\"equal\",\"value\":1}]'")
+	cmd.Flags().StringVar(&o.savedFilter, "saved-filter", "", "Apply a saved task filter by id (from 'task filters'), e.g. :in or 220612")
 	return cmd
 }
 
@@ -61,6 +63,9 @@ func runList(ctx context.Context, o *listOptions) error {
 	}
 	if err := cmdutil.ApplyFilter(body, o.filter); err != nil {
 		return err
+	}
+	if o.savedFilter != "" {
+		body["filterId"] = o.savedFilter
 	}
 	client, err := o.client()
 	if err != nil {

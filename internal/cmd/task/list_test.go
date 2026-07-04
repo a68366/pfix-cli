@@ -177,3 +177,52 @@ func TestRunListFilter(t *testing.T) {
 		}
 	})
 }
+
+func TestRunListSavedFilter(t *testing.T) {
+	send := func(o *listOptions) string {
+		var gotBody string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			b, _ := io.ReadAll(r.Body)
+			gotBody = string(b)
+			io.WriteString(w, `{"result":"success","tasks":[]}`)
+		}))
+		defer srv.Close()
+		o.client = fakeClient(srv.URL)
+		o.out = &strings.Builder{}
+		if err := runList(context.Background(), o); err != nil {
+			t.Fatalf("runList: %v", err)
+		}
+		return gotBody
+	}
+
+	t.Run("system token forwarded as filterId", func(t *testing.T) {
+		body := send(&listOptions{limit: 100, savedFilter: ":in"})
+		if !strings.Contains(body, `"filterId":":in"`) {
+			t.Errorf("body missing filterId: %q", body)
+		}
+	})
+
+	t.Run("numeric id forwarded verbatim", func(t *testing.T) {
+		body := send(&listOptions{limit: 100, savedFilter: "220612"})
+		if !strings.Contains(body, `"filterId":"220612"`) {
+			t.Errorf("body missing numeric filterId: %q", body)
+		}
+	})
+
+	t.Run("absent when flag unset", func(t *testing.T) {
+		body := send(&listOptions{limit: 100})
+		if strings.Contains(body, "filterId") {
+			t.Errorf("body should not contain filterId when unset: %q", body)
+		}
+	})
+
+	t.Run("combines with raw --filter", func(t *testing.T) {
+		body := send(&listOptions{limit: 100, savedFilter: ":in", filter: `[{"type":1,"operator":"equal","value":5}]`})
+		if !strings.Contains(body, `"filterId":":in"`) {
+			t.Errorf("body missing filterId: %q", body)
+		}
+		if !strings.Contains(body, `"filters":[{`) {
+			t.Errorf("body missing filters: %q", body)
+		}
+	})
+}
