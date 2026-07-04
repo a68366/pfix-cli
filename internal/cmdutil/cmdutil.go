@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/a68366/pfix-cli/internal/config"
 	"github.com/a68366/pfix-cli/internal/planfix"
@@ -135,4 +136,20 @@ func ParsePeople(refs []string) (map[string]any, error) {
 		}
 	}
 	return map[string]any{"users": users, "groups": groups}, nil
+}
+
+// ParseTimePoint parses an ISO date or datetime into the Planfix time-point
+// shape {"date": "dd-MM-yyyy"} or {"date": ..., "time": "HH:mm"}. Accepted
+// inputs: 2006-01-02, "2006-01-02 15:04", 2006-01-02T15:04. Planfix
+// interprets the wall-clock value in the account's timezone.
+func ParseTimePoint(s string) (map[string]any, error) {
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return map[string]any{"date": t.Format("02-01-2006")}, nil
+	}
+	for _, layout := range []string{"2006-01-02 15:04", "2006-01-02T15:04"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return map[string]any{"date": t.Format("02-01-2006"), "time": t.Format("15:04")}, nil
+		}
+	}
+	return nil, fmt.Errorf(`invalid date %q: use YYYY-MM-DD, "YYYY-MM-DD HH:MM", or YYYY-MM-DDTHH:MM`, s)
 }

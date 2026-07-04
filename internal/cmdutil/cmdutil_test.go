@@ -257,3 +257,44 @@ func TestParsePeople(t *testing.T) {
 		})
 	}
 }
+
+func TestParseTimePoint(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    map[string]any
+		wantErr bool
+	}{
+		{name: "date only", input: "2026-07-10", want: map[string]any{"date": "10-07-2026"}},
+		{name: "date and time", input: "2026-07-10 18:30", want: map[string]any{"date": "10-07-2026", "time": "18:30"}},
+		{name: "T separator", input: "2026-07-10T18:30", want: map[string]any{"date": "10-07-2026", "time": "18:30"}},
+		{name: "leap day", input: "2024-02-29", want: map[string]any{"date": "29-02-2024"}},
+		{name: "invalid calendar date", input: "2026-13-40", wantErr: true},
+		{name: "non-leap february 29", input: "2023-02-29", wantErr: true},
+		{name: "output format rejected as input", input: "10-07-2026", wantErr: true},
+		{name: "bad time", input: "2026-07-10 25:00", wantErr: true},
+		{name: "seconds not accepted", input: "2026-07-10 18:30:15", wantErr: true},
+		{name: "garbage", input: "next tuesday", wantErr: true},
+		{name: "empty", input: "", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseTimePoint(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("ParseTimePoint(%q) expected error, got %#v", tt.input, got)
+				}
+				if !strings.Contains(err.Error(), "invalid date") {
+					t.Errorf("ParseTimePoint(%q) error = %q, want it to contain %q", tt.input, err.Error(), "invalid date")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ParseTimePoint(%q) unexpected error: %v", tt.input, err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseTimePoint(%q) = %#v, want %#v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
