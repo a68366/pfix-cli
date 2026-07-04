@@ -15,10 +15,3 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	cmd.AddCommand(newLoginCmd(g), newStatusCmd(g), newLogoutCmd(g))
 	return cmd
 }
-
-func firstNonEmpty(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
-}
