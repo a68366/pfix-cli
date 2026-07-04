@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/a68366/pfix-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/a68366/pfix-cli/actions/workflows/ci.yml)
 
-A command-line client for the [Planfix](https://planfix.com) REST API, written in Go. It ships as a single self-contained binary and is built for two audiences: people working in a terminal, and automation or AI agents that consume machine-readable output.
+An unofficial command-line client for the [Planfix](https://planfix.com) REST API, written in Go. Ships as a single self-contained binary.
+
+> **Unofficial.** pfix is an independent open-source project. It is **not** an official Planfix product and is not affiliated with, endorsed, sponsored, or funded by Planfix. The Planfix name is used only to describe the API this tool connects to.
 
 > **Status: early development.** Credential management (`auth`), a raw authenticated request passthrough (`api`), profile management (`config`), and the typed `task`, `project`, `contact`, `user`, `report`, `datatag`, `template`, `customfield`, and `object` commands (with human-readable table output) are implemented. Further typed resources are on the [roadmap](#roadmap).
 
@@ -246,8 +248,8 @@ pfix config use staging     # set the active profile (current_profile)
 
 ## Roadmap
 
-- Further typed resources beyond `task` and `project`.
-- Richer list filtering (currently use `api` with a POST body for arbitrary filters).
+- Typed `directory` and `file` commands.
+- Running saved reports (`report` currently covers definitions only).
 
 ## Development
 
@@ -256,6 +258,7 @@ go test ./...        # run the test suite
 go vet ./...         # static analysis
 gofmt -l .           # formatting check (prints nothing when clean)
 go build -o pfix .   # build the binary
+golangci-lint run    # lint (optional locally; CI runs it)
 ```
 
 See [`AGENTS.md`](AGENTS.md) for architecture and conventions.

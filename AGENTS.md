@@ -1,4 +1,4 @@
-pfix is a public, open-source command-line client for the Planfix REST API, written in Go. It ships as a single self-contained binary and serves two audiences: people working in a terminal, and automated or AI agents that consume machine-readable output.
+pfix is an unofficial, public, open-source command-line client for the Planfix REST API, written in Go. It ships as a single self-contained binary. It is an independent project — not affiliated with, endorsed, sponsored, or funded by Planfix.
 
 ## Status
 
@@ -22,6 +22,7 @@ All tested. Still to come: `directory`/`file` as access allows. `process` is not
 ## Project rules
 
 - **Public and vendor-neutral.** Describe pfix's behavior on its own terms. Committed artifacts (code, comments, docstrings, identifiers, fixtures, docs, README, commit messages) must not name, reference, or compare against other products or tools, and must not include copied or cited third-party material.
+- **Unofficial.** pfix is an independent project with no affiliation to Planfix. Keep the disclaimers in README.md and this file accurate.
 - **Public dependencies only.** Every dependency must be installable from public sources. No private package indexes or internal libraries.
 - **License:** Apache-2.0.
 
