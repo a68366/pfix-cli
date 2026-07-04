@@ -2,7 +2,7 @@ pfix is an unofficial, public, open-source command-line client for the Planfix R
 
 ## Status
 
-Milestones 1–15 are implemented and merged to `main`:
+Milestones 1–16 are implemented and merged to `main`:
 - **M1:** the config/profile layer, the Planfix transport client, `auth` (login/status/logout), and the raw `api` passthrough.
 - **M2:** the typed `task` command group (`list`, `view`, `create`, `update`, `comment list`, `comment add`) and the `internal/output` rendering layer (table/detail/raw-JSON) that makes `--json`/`--fields`/`--quiet` meaningful.
 - **M3:** the typed `project` command group (`list`, `view`, `create`, `update` — projects have no comments), plus extraction of the shared command helpers into `cmdutil` (`FieldsCSV`/`ValidateID`/`DecodeJSON`/`ClientFunc`) and `output` (`ColumnsFor`) so every resource reuses them.
@@ -18,6 +18,7 @@ Milestones 1–15 are implemented and merged to `main`:
 - **M13:** a `--filter <json>` pass-through on the 7 POST-list commands (task/project/contact/user/report/datatag/object) via `cmdutil.ApplyFilter` — forwards a raw Planfix `filters` array in the request body. GET-based `template`/`customfield` are excluded.
 - **M14:** typed field flags on `task create`/`task update` — `--template` (create-only), `--project`, `--parent`, `--status` (now also on create), `--priority` (client-validated: the API silently resets invalid values to `NotUrgent`), `--counterparty` (contact id or `contact:N`), `--assignees`/`--auditors`/`--participants` (comma-separated `user:N`/`contact:N`/`group:N`; update replaces the list), `--start-date`/`--end-date` (ISO input → Planfix `dd-MM-yyyy`/`HH:mm`, interpreted in the account timezone). Shared parsers `cmdutil.ParsePeople`/`cmdutil.ParseTimePoint`; task-local `taskFields` registers/applies the flag set for both commands.
 - **M15:** the `ping` command (`GET /ping`) — a connectivity + token-validity check that prints `OK` (`--json` passes the raw `{"result":"success"}` through; `-q` prints nothing and just sets the exit code). `auth status` now validates the token via `GET /ping` instead of `POST /task/list` — lighter and scope-independent (a task-list probe would misreport a valid token scoped only to, say, contacts). Adds shared `cmdutil.DescribeAPIError`, which maps the Planfix auth app-codes to actionable hints (code 1 unknown token → `pfix auth login`; code 5 scope denied → the token lacks the scope), used by both `ping` and `auth status`.
+- **M16:** saved task filters — the read-only `task filters` command (`POST /task/filters`; envelope `filters`; columns ID/NAME/OWNER via `owner.name`) and a `--saved-filter <id>` flag on `task list` that forwards a `filterId` in the request body. The id is an opaque string (system tokens `:all`/`:in`/`:out`/`:audit` or a numeric id) forwarded verbatim; an unknown id surfaces the API's `code 41` error. This is distinct from the declined *typed filter flags* — it applies an existing named filter rather than building a `filters` array. When both are supplied, `--saved-filter` and `--filter` combine as a logical AND — the raw filter further narrows the saved view (both constraints apply; verified live against the API).
 
 All tested. Still to come: `directory`/`file` as access allows. `process` is not exposed via REST (postponed); deletes, `user update`, typed filter flags, and color were declined by the user. Keep this file in sync as code lands.
 
@@ -66,7 +67,8 @@ Planned (not yet present):
 13. **Done (M13):** `--filter` JSON pass-through on the POST-list commands.
 14. **Done (M14):** typed field flags on `task create`/`task update`.
 15. **Done (M15):** `ping` command + `auth status` token check via `GET /ping` (shared `cmdutil.DescribeAPIError` auth-error hints).
-16. **Next:** `directory`/`file` as access allows. `process` postponed (not in REST).
+16. **Done (M16):** saved task filters — `task filters` (read-only) + `task list --saved-filter` (`filterId` pass-through).
+17. **Next:** `directory`/`file` as access allows. `process` postponed (not in REST).
 
 ## Conventions
 

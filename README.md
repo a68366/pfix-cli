@@ -79,6 +79,20 @@ pfix task list --filter '[{"type":51,"operator":"equal","value":42}]'
 Filter `type` codes are Planfix-specific; see the Planfix REST filter reference for
 the available types and operators.
 
+**Saved filters (task only).** Instead of a raw array, `task list` can apply one of
+the account's saved filters by id with `--saved-filter`. List the available filters —
+system ones (`:all`, `:in`, `:out`, `:audit`) and user-defined views — with `task filters`:
+
+```sh
+pfix task filters                 # table of saved task filters (ID / NAME / OWNER)
+pfix task list --saved-filter :in # apply the "Incoming" saved filter
+pfix task list --saved-filter 220612
+```
+
+A saved-filter id is an opaque string. `--filter` and `--saved-filter` combine as a
+logical AND — the raw filter further narrows the saved view (both constraints apply
+together, verified against the API).
+
 ### Tasks
 
 ```sh
@@ -87,6 +101,8 @@ pfix task list
 pfix task list --limit 20 --offset 20
 pfix task list --fields id,name,status      # choose your own columns
 pfix task list --json                       # raw API response
+pfix task list --saved-filter :in           # apply a saved filter (see: pfix task filters)
+pfix task filters                           # list saved task filters
 
 # View one task (detail block, or --json for everything)
 pfix task view 17
