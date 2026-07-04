@@ -2,7 +2,7 @@ pfix is an unofficial, public, open-source command-line client for the Planfix R
 
 ## Status
 
-Milestones 1–13 are implemented and merged to `main`:
+Milestones 1–14 are implemented and merged to `main`:
 - **M1:** the config/profile layer, the Planfix transport client, `auth` (login/status/logout), and the raw `api` passthrough.
 - **M2:** the typed `task` command group (`list`, `view`, `create`, `update`, `comment list`, `comment add`) and the `internal/output` rendering layer (table/detail/raw-JSON) that makes `--json`/`--fields`/`--quiet` meaningful.
 - **M3:** the typed `project` command group (`list`, `view`, `create`, `update` — projects have no comments), plus extraction of the shared command helpers into `cmdutil` (`FieldsCSV`/`ValidateID`/`DecodeJSON`/`ClientFunc`) and `output` (`ColumnsFor`) so every resource reuses them.
@@ -16,6 +16,7 @@ Milestones 1–13 are implemented and merged to `main`:
 - **M11:** the typed `customfield` command (`list <type>` — read-only). `GET /customfield/<type>` (fixed prefix + type segment), envelope `customfields`; columns ID/NAME/TYPE.
 - **M12:** the typed `object` command group (`list`, `view` — read-only). POST-list + GET-view with pagination; envelopes `objects`/`object`; object status is **fat** so STATUS uses `status.name`.
 - **M13:** a `--filter <json>` pass-through on the 7 POST-list commands (task/project/contact/user/report/datatag/object) via `cmdutil.ApplyFilter` — forwards a raw Planfix `filters` array in the request body. GET-based `template`/`customfield` are excluded.
+- **M14:** typed field flags on `task create`/`task update` — `--template` (create-only), `--project`, `--parent`, `--status` (now also on create), `--priority` (client-validated: the API silently resets invalid values to `NotUrgent`), `--counterparty` (contact id or `contact:N`), `--assignees`/`--auditors`/`--participants` (comma-separated `user:N`/`contact:N`/`group:N`; update replaces the list), `--start-date`/`--end-date` (ISO input → Planfix `dd-MM-yyyy`/`HH:mm`, interpreted in the account timezone). Shared parsers `cmdutil.ParsePeople`/`cmdutil.ParseTimePoint`; task-local `taskFields` registers/applies the flag set for both commands.
 
 All tested. Still to come: `directory`/`file` as access allows. `process` is not exposed via REST (postponed); deletes, `user update`, typed filter flags, and color were declined by the user. Keep this file in sync as code lands.
 
@@ -38,7 +39,7 @@ All tested. Still to come: `directory`/`file` as access allows. `process` is not
 Implemented:
 - `main.go` — thin entry point (`cmd.Execute`).
 - `internal/cmd/` — Cobra commands: `root`, `version`, `auth/` (login/status/logout), `api/`, `task/` (`list`, `view`, `create`, `update`, and the `comment` sub-group), `project/` (`list`, `view`, `create`, `update`), `contact/` (`list`, `view`, `create`, `update`), `user/` (`list`, `view` — read-only), `report/` (`list`, `view` — read-only), `datatag/` (`list`, `view` — read-only), `template/` (`list <type>` — read-only, GET-based), `customfield/` (`list <type>` — read-only, GET-based), `object/` (`list`, `view` — read-only), `config/` (`list`, `use`, `show` — local profile management). The data package `internal/config` is imported as `pfconfig` inside `internal/cmd/config` to avoid the package-name collision.
-- `internal/cmdutil/` — `GlobalOpts` (persistent flags), the `Client()`/`ClientFunc()` helpers that build a configured client from the active profile, and the resource-agnostic command helpers shared by every typed command (`FieldsCSV`, `ValidateID`, `DecodeJSON`).
+- `internal/cmdutil/` — `GlobalOpts` (persistent flags), the `Client()`/`ClientFunc()` helpers that build a configured client from the active profile, and the resource-agnostic command helpers shared by every typed command (`FieldsCSV`, `ValidateID`, `DecodeJSON`, `ApplyFilter`, `ParsePeople`, `ParseTimePoint`).
 - `internal/planfix/` — Planfix REST client. A low-level `Client.Do(ctx, method, path, body, headers)` carries auth, throttling, and retries; `Client.JSON(ctx, method, path, body)` is the typed-command convenience over it (marshals the body, returns raw response bytes, maps status ≥300 to `*APIError`). `errors.go` holds `APIError` (incl. the Planfix app `Code`)/`ParseError`.
 - `internal/output/` — renders decoded JSON: `Table`/`Detail` via `text/tabwriter`, a dot-path `Flatten` (e.g. `status.name`; an object with no `name` falls back to its `id`), `ColumnsFor` (default vs `--fields`-derived columns), rune-safe `Truncate`, and `JSON` (pretty-print/raw passthrough — shared with `api`).
 - `internal/config/` — profile load/save (atomic, mode 0600) and value precedence (`Resolve`, `ResolveProfileName`).
@@ -62,7 +63,8 @@ Planned (not yet present):
 11. **Done (M11):** `customfield` — list per object type (read-only, GET-based).
 12. **Done (M12):** `object` — list, view (read-only).
 13. **Done (M13):** `--filter` JSON pass-through on the POST-list commands.
-14. **Next:** `directory`/`file` as access allows. `process` postponed (not in REST).
+14. **Done (M14):** typed field flags on `task create`/`task update`.
+15. **Next:** `directory`/`file` as access allows. `process` postponed (not in REST).
 
 ## Conventions
 

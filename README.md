@@ -89,11 +89,14 @@ pfix task view 17 --json
 
 # Create a task (--name required); prints the new id
 pfix task create --name "Deploy release" --description "ship it"
+pfix task create --name "Release prep" --template 6 --project 21 \
+  --assignees user:1,contact:4 --auditors group:3 --end-date 2026-07-20
 pfix task create --name "Quick task" -q     # prints just the id
 
-# Update a task — pass any of --name/--description/--status (status id)
+# Update a task — pass any field flag (people lists and dates are replaced, not merged)
 pfix task update 17 --status 2
 pfix task update 17 --name "Renamed" --description "new body"
+pfix task update 17 --assignees user:1 --priority Urgent --start-date "2026-07-08 10:00"
 
 # Comments
 pfix task comment list 17
@@ -107,6 +110,15 @@ Notes:
 - `--status` takes a numeric status id (see a task's current status via
   `pfix task view <id> --json`). Field names for `--fields` are Planfix REST
   field names; unknown names are silently ignored by the API.
+- `--assignees`/`--auditors`/`--participants` take comma-separated prefixed
+  references — `user:N`, `contact:N`, or `group:N`. On `update` the list you
+  pass **replaces** the stored one.
+- `--start-date`/`--end-date` accept `YYYY-MM-DD` or `"YYYY-MM-DD HH:MM"`;
+  Planfix interprets the time in the account's timezone.
+- `--priority` is `Urgent` or `NotUrgent` (validated locally — the API would
+  silently fall back to `NotUrgent` on anything else).
+- `--counterparty` takes a contact id or `contact:N`. `--template` exists only
+  on `create`; a task's template cannot be changed afterwards.
 
 ### Projects
 
