@@ -36,6 +36,8 @@ checksum:
 
 changelog:
   sort: asc
+  abbrev: 7
+  format: "[`{{ .SHA }}`](https://github.com/a68366/pfix-cli/commit/{{ .SHA }}) {{ .Message }}"
   filters:
     exclude:
       - '^docs(\(.*\))?:'
