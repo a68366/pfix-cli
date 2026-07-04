@@ -57,6 +57,8 @@ func TestParseCounterparty(t *testing.T) {
 		{input: "-3", wantErr: true},
 		{input: "user:4", wantErr: true},
 		{input: "", wantErr: true},
+		{input: "contact:+4", wantErr: true},
+		{input: "007", wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
@@ -184,6 +186,14 @@ func TestTaskFieldsApply(t *testing.T) {
 		err := f.apply(map[string]any{}, changedSet("start-date"))
 		if err == nil || !strings.Contains(err.Error(), "invalid date") {
 			t.Fatalf("err = %v, want invalid date", err)
+		}
+	})
+
+	t.Run("empty people list rejected", func(t *testing.T) {
+		f := &taskFields{}
+		err := f.apply(map[string]any{}, changedSet("assignees"))
+		if err == nil || !strings.Contains(err.Error(), "--assignees requires at least one reference") {
+			t.Fatalf("err = %v, want --assignees requires at least one reference", err)
 		}
 	})
 }

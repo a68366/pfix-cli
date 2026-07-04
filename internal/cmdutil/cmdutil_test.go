@@ -234,6 +234,8 @@ func TestParsePeople(t *testing.T) {
 		{name: "non-numeric id", refs: []string{"user:abc"}, wantErr: "positive"},
 		{name: "zero id", refs: []string{"user:0"}, wantErr: "positive"},
 		{name: "negative group id", refs: []string{"group:-1"}, wantErr: "positive"},
+		{name: "leading plus", refs: []string{"user:+7"}, wantErr: "positive"},
+		{name: "leading zeros", refs: []string{"group:007"}, wantErr: "positive"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

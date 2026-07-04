@@ -30,7 +30,7 @@ func parsePriority(s string) (string, error) {
 func parseCounterparty(s string) (map[string]any, error) {
 	num, prefixed := strings.CutPrefix(s, "contact:")
 	id, err := strconv.Atoi(num)
-	if err != nil || id <= 0 {
+	if err != nil || id <= 0 || num != strconv.Itoa(id) {
 		return nil, fmt.Errorf("invalid counterparty %q: use a contact id or contact:N", s)
 	}
 	if prefixed {
@@ -70,8 +70,8 @@ func (f *taskFields) register(cmd *cobra.Command, withTemplate bool) {
 	fl.StringSliceVar(&f.assignees, "assignees", nil, "Assignees: user:N, contact:N, or group:N (comma-separated; replaces the list on update)")
 	fl.StringSliceVar(&f.auditors, "auditors", nil, "Auditors: user:N, contact:N, or group:N (comma-separated; replaces the list on update)")
 	fl.StringSliceVar(&f.participants, "participants", nil, "Participants: user:N, contact:N, or group:N (comma-separated; replaces the list on update)")
-	fl.StringVar(&f.startDate, "start-date", "", `Start date: YYYY-MM-DD or "YYYY-MM-DD HH:MM" (time is interpreted in the account timezone)`)
-	fl.StringVar(&f.endDate, "end-date", "", `End date: YYYY-MM-DD or "YYYY-MM-DD HH:MM" (time is interpreted in the account timezone)`)
+	fl.StringVar(&f.startDate, "start-date", "", `Start date: YYYY-MM-DD, "YYYY-MM-DD HH:MM", or YYYY-MM-DDTHH:MM (time is interpreted in the account timezone)`)
+	fl.StringVar(&f.endDate, "end-date", "", `End date: YYYY-MM-DD, "YYYY-MM-DD HH:MM", or YYYY-MM-DDTHH:MM (time is interpreted in the account timezone)`)
 }
 
 // apply validates every flag reported set by `set` (cmd.Flags().Changed) and
@@ -87,6 +87,8 @@ func (f *taskFields) apply(body map[string]any, set func(string) bool) error {
 		{"parent", f.parent},
 		{"status", f.status},
 	}
+	// set() is false for flags the command never registered (e.g. template on update),
+	// so unregistered flags are skipped safely.
 	for _, x := range ids {
 		if !set(x.flag) {
 			continue
@@ -121,6 +123,9 @@ func (f *taskFields) apply(body map[string]any, set func(string) bool) error {
 	for _, x := range people {
 		if !set(x.flag) {
 			continue
+		}
+		if len(x.refs) == 0 {
+			return fmt.Errorf("--%s requires at least one reference", x.flag)
 		}
 		v, err := cmdutil.ParsePeople(x.refs)
 		if err != nil {

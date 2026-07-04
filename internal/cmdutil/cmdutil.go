@@ -126,7 +126,7 @@ func ParsePeople(refs []string) (map[string]any, error) {
 			return nil, fmt.Errorf("invalid people reference %q: use user:N, contact:N, or group:N", ref)
 		}
 		id, err := strconv.Atoi(num)
-		if err != nil || id <= 0 {
+		if err != nil || id <= 0 || num != strconv.Itoa(id) {
 			return nil, fmt.Errorf("invalid people reference %q: id must be a positive number", ref)
 		}
 		if kind == "group" {
