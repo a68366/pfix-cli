@@ -43,6 +43,17 @@ pfix auth status     # show the active profile and check the token
 pfix auth logout     # remove a profile's credentials
 ```
 
+To log in a second account without touching the first, save it under a separate
+profile:
+
+```sh
+pfix auth login --profile work   # stores a distinct 'work' profile
+```
+
+A bare `pfix auth login` re-run targets the active profile (flag > `PFIX_PROFILE` >
+current profile > `default`) and asks for confirmation before overwriting an
+existing one. Add `--force` to skip the prompt.
+
 Check connectivity and that the active token is accepted with `pfix ping` — it prints
 `OK` on success (`--json` for the raw response, `-q` to print nothing and just set the
 exit code) and exits non-zero if the token is rejected. It is the lightest such check;

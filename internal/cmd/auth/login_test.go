@@ -80,6 +80,85 @@ func TestRunLoginRespectsPFIXPROFILE(t *testing.T) {
 	}
 }
 
+func seedProfile(t *testing.T, path, name, domain, token string) {
+	t.Helper()
+	cfg := &config.Config{
+		CurrentProfile: name,
+		Profiles:       map[string]config.Profile{name: {Domain: domain, Token: token}},
+	}
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatalf("seed config: %v", err)
+	}
+}
+
+func TestRunLoginConfirmsBeforeOverwritingExistingProfile(t *testing.T) {
+	o := baseOpts(t, func(context.Context, string, string) error { return nil })
+	path, _ := o.configPath()
+	seedProfile(t, path, "default", "old.planfix.com", "old-tok")
+	o.in = strings.NewReader("y\nnew.planfix.com\n")
+	o.readSecret = func(string) (string, error) { return "new-tok", nil }
+
+	if err := runLogin(context.Background(), o); err != nil {
+		t.Fatalf("runLogin: %v", err)
+	}
+	cfg, _ := config.Load(path)
+	if p := cfg.Profiles["default"]; p.Domain != "new.planfix.com" || p.Token != "new-tok" {
+		t.Errorf("profile after confirmed overwrite = %+v", p)
+	}
+}
+
+func TestRunLoginAbortsOverwriteWhenDeclined(t *testing.T) {
+	o := baseOpts(t, func(context.Context, string, string) error { return nil })
+	path, _ := o.configPath()
+	seedProfile(t, path, "default", "old.planfix.com", "old-tok")
+	o.in = strings.NewReader("n\n")
+
+	if err := runLogin(context.Background(), o); err != nil {
+		t.Fatalf("runLogin: %v", err)
+	}
+	cfg, _ := config.Load(path)
+	if p := cfg.Profiles["default"]; p.Domain != "old.planfix.com" || p.Token != "old-tok" {
+		t.Errorf("declined overwrite changed profile: %+v", p)
+	}
+}
+
+func TestRunLoginForceSkipsOverwriteConfirmation(t *testing.T) {
+	o := baseOpts(t, func(context.Context, string, string) error { return nil })
+	o.force = true
+	path, _ := o.configPath()
+	seedProfile(t, path, "default", "old.planfix.com", "old-tok")
+	o.in = strings.NewReader("new.planfix.com\n")
+	o.readSecret = func(string) (string, error) { return "new-tok", nil }
+
+	if err := runLogin(context.Background(), o); err != nil {
+		t.Fatalf("runLogin: %v", err)
+	}
+	cfg, _ := config.Load(path)
+	if p := cfg.Profiles["default"]; p.Domain != "new.planfix.com" || p.Token != "new-tok" {
+		t.Errorf("force overwrite = %+v", p)
+	}
+}
+
+func TestRunLoginOverwritePromptIsActionable(t *testing.T) {
+	o := baseOpts(t, func(context.Context, string, string) error { return nil })
+	path, _ := o.configPath()
+	seedProfile(t, path, "default", "old.planfix.com", "old-tok")
+	out := &strings.Builder{}
+	o.out = out
+	o.in = strings.NewReader("n\n")
+
+	if err := runLogin(context.Background(), o); err != nil {
+		t.Fatalf("runLogin: %v", err)
+	}
+	got := out.String()
+	if !strings.Contains(got, "--profile") {
+		t.Errorf("prompt should mention --profile, got: %q", got)
+	}
+	if !strings.Contains(got, "default") {
+		t.Errorf("prompt should name the existing profile, got: %q", got)
+	}
+}
+
 func TestMaskToken(t *testing.T) {
 	if got := cmdutil.MaskToken("abcdef"); got != "****cdef" {
 		t.Errorf("MaskToken = %q", got)

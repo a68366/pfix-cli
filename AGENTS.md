@@ -3,7 +3,7 @@ pfix is an unofficial, public, open-source command-line client for the Planfix R
 ## Status
 
 Milestones 1–16 are implemented and merged to `main`:
-- **M1:** the config/profile layer, the Planfix transport client, `auth` (login/status/logout), and the raw `api` passthrough.
+- **M1:** the config/profile layer, the Planfix transport client, `auth` (login/status/logout — `login` resolves its target profile before prompting and confirms before overwriting an existing one, with `--force` to skip the prompt; `--profile <name>` saves a second account as a distinct profile), and the raw `api` passthrough.
 - **M2:** the typed `task` command group (`list`, `view`, `create`, `update`, `comment list`, `comment add`) and the `internal/output` rendering layer (table/detail/raw-JSON) that makes `--json`/`--fields`/`--quiet` meaningful.
 - **M3:** the typed `project` command group (`list`, `view`, `create`, `update` — projects have no comments), plus extraction of the shared command helpers into `cmdutil` (`FieldsCSV`/`ValidateID`/`DecodeJSON`/`ClientFunc`) and `output` (`ColumnsFor`) so every resource reuses them.
 - **M4:** the typed `contact` command group (`list`, `view`, `create`, `update`) for people and companies. `contact create` requires `--template` (Planfix rejects a templateless contact).
