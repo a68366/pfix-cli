@@ -85,7 +85,6 @@ func (f *taskFields) apply(body map[string]any, set func(string) bool) error {
 		{"template", f.template},
 		{"project", f.project},
 		{"parent", f.parent},
-		{"status", f.status},
 	}
 	// set() is false for flags the command never registered (e.g. template on update),
 	// so unregistered flags are skipped safely.
@@ -97,6 +96,13 @@ func (f *taskFields) apply(body map[string]any, set func(string) bool) error {
 			return fmt.Errorf("--%s must be a positive number, got %d", x.flag, x.val)
 		}
 		body[x.flag] = map[string]any{"id": x.val}
+	}
+	// status accepts 0 (Draft, a valid status id); only negative is invalid.
+	if set("status") {
+		if f.status < 0 {
+			return fmt.Errorf("--status must be 0 or a positive number, got %d", f.status)
+		}
+		body["status"] = map[string]any{"id": f.status}
 	}
 	if set("priority") {
 		p, err := parsePriority(f.priority)

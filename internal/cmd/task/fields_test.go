@@ -221,3 +221,29 @@ func TestTaskFieldsRegister(t *testing.T) {
 		}
 	}
 }
+
+func TestApplyStatusZeroAllowed(t *testing.T) {
+	f := &taskFields{status: 0}
+	body := map[string]any{}
+	if err := f.apply(body, changedSet("status")); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	got, ok := body["status"].(map[string]any)
+	if !ok || got["id"] != 0 {
+		t.Fatalf("body status = %v, want {id:0}", body["status"])
+	}
+}
+
+func TestApplyStatusNegativeRejected(t *testing.T) {
+	f := &taskFields{status: -1}
+	if err := f.apply(map[string]any{}, changedSet("status")); err == nil {
+		t.Fatalf("want error for negative status")
+	}
+}
+
+func TestApplyProjectZeroStillRejected(t *testing.T) {
+	f := &taskFields{project: 0}
+	if err := f.apply(map[string]any{}, changedSet("project")); err == nil {
+		t.Fatalf("project 0 must still be rejected")
+	}
+}
