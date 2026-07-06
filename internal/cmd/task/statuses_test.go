@@ -125,3 +125,72 @@ func TestStatusesNegativeProcess(t *testing.T) {
 		t.Fatalf("err = %v, want negative-process error", err)
 	}
 }
+
+func TestStatusesJSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","statuses":[{"id":1,"name":"New","isActive":true}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &statusesOptions{process: 40720, json: true, client: fakeClient(srv.URL), out: out, errOut: io.Discard}
+	if err := runStatuses(context.Background(), o); err != nil {
+		t.Fatalf("runStatuses: %v", err)
+	}
+	result := out.String()
+	if !strings.Contains(result, `"result"`) || !strings.Contains(result, `"statuses"`) {
+		t.Errorf("json output missing fields: %q", result)
+	}
+	if strings.Contains(result, "ACTIVE") {
+		t.Errorf("json mode should not render a table: %q", result)
+	}
+}
+
+func TestStatusesQuiet(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","statuses":[{"id":2,"name":"In progress","isActive":true}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &statusesOptions{process: 40720, quiet: true, client: fakeClient(srv.URL), out: out, errOut: io.Discard}
+	if err := runStatuses(context.Background(), o); err != nil {
+		t.Fatalf("runStatuses: %v", err)
+	}
+	result := out.String()
+	for _, hdr := range []string{"ID", "NAME", "ACTIVE"} {
+		if strings.Contains(result, hdr) {
+			t.Errorf("quiet mode should not show header %q: %q", hdr, result)
+		}
+	}
+	if !strings.Contains(result, "In progress") {
+		t.Errorf("quiet mode should still show data: %q", result)
+	}
+}
+
+func TestStatusesFieldsOverride(t *testing.T) {
+	var gotQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.RawQuery
+		io.WriteString(w, `{"result":"success","statuses":[{"id":1,"name":"New"}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &statusesOptions{process: 40720, fields: "id,name", client: fakeClient(srv.URL), out: out, errOut: io.Discard}
+	if err := runStatuses(context.Background(), o); err != nil {
+		t.Fatalf("runStatuses: %v", err)
+	}
+	if !strings.Contains(gotQuery, "fields=id%2Cname") && !strings.Contains(gotQuery, "fields=id,name") {
+		t.Errorf("query = %q, want overridden fields", gotQuery)
+	}
+	result := out.String()
+	for _, want := range []string{"ID", "NAME", "New"} {
+		if !strings.Contains(result, want) {
+			t.Errorf("output missing %q: %q", want, result)
+		}
+	}
+	if strings.Contains(result, "ACTIVE") {
+		t.Errorf("overridden fields should drop the ACTIVE column: %q", result)
+	}
+}
