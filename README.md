@@ -115,6 +115,11 @@ pfix task list --saved-filter :in           # apply a saved filter (see: pfix ta
 pfix task filters                           # list saved task filters
 pfix task list --jq '.tasks[].name'         # just the names, one per line
 
+# Discover the status ids --status accepts (resolves the task's process)
+pfix task statuses 17
+pfix task statuses --process 234106   # or query a process directly
+pfix task processes                   # list task processes (ID / NAME)
+
 # View one task (detail block, or --json for everything)
 pfix task view 17
 pfix task view 17 --json
@@ -140,9 +145,11 @@ echo "comment from stdin" | pfix task comment add 17
 Notes:
 - A task's **description** is its first comment in Planfix — it shows up in
   `comment list` as well as in `view`.
-- `--status` takes a numeric status id (see a task's current status via
-  `pfix task view <id> --json`). Field names for `--fields` are Planfix REST
-  field names; unknown names are silently ignored by the API.
+- `--status` takes a numeric status id — discover the valid ids for a task
+  with `pfix task statuses <id>` (or `--process <id>`). `--status 0` is the
+  Draft status: it can be set at create time, but the API will not move an
+  existing task back to Draft on update. Field names for `--fields` are Planfix
+  REST field names; unknown names are silently ignored by the API.
 - `--assignees`/`--auditors`/`--participants` take comma-separated prefixed
   references — `user:N`, `contact:N`, or `group:N`. On `update` the list you
   pass **replaces** the stored one.
@@ -174,6 +181,7 @@ Planfix UI.
 ```sh
 pfix contact list                                   # table; --limit / --offset page
 pfix contact view 42                                # detail block (--json for everything)
+pfix contact processes                              # list contact processes (ID / NAME)
 pfix contact create --name "Ada" --lastname "Lovelace" --template 1 --email ada@example.com
 pfix contact update 42 --email new@example.com --lastname "Byron"
 ```
