@@ -1,6 +1,7 @@
 package output
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,8 +33,14 @@ func EmitJSON(w io.Writer, raw []byte, jqExpr string) error {
 	if err != nil {
 		return err
 	}
+	// Decode with UseNumber so integer ids beyond 2^53 survive as json.Number
+	// instead of being rounded to float64. gojq accepts json.Number input and
+	// normalizes it to int/*big.Int, so large ids pass through exactly and
+	// arithmetic still works.
 	var input any
-	if err := json.Unmarshal(raw, &input); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	if err := dec.Decode(&input); err != nil {
 		return fmt.Errorf("--jq: response is not valid JSON: %w", err)
 	}
 	iter := q.Run(input)

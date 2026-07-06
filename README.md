@@ -74,9 +74,9 @@ typed command:
 string prints raw and unquoted (pipe-friendly); any other result (object,
 array, number, bool, null) prints as compact JSON, one result per line. An
 invalid expression is rejected before any request is made. The jq engine is
-embedded in `pfix` — no external `jq` binary is required. Numbers are processed
-as floating-point (the jq number model), so integers beyond 2^53 may lose
-precision under `--jq`; use plain `--json` when you need exact large numbers.
+embedded in `pfix` — no external `jq` binary is required. Integer values,
+including ids beyond 2^53, are preserved exactly through `--jq`; fractional
+numbers follow jq's usual number model.
 
 **Filtering lists.** The `list` commands for `task`, `project`, `contact`, `user`,
 `report`, `datatag`, and `object` accept `--filter <json>` — a raw Planfix filters

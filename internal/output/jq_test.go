@@ -56,6 +56,11 @@ func TestEmitJSONFiltered(t *testing.T) {
 		{"object result compact", `{"tasks":[{"name":"a"}]}`, ".tasks[0]", "{\"name\":\"a\"}\n"},
 		{"missing key yields null", `{}`, ".missing", "null\n"},
 		{"empty result set", `{"tasks":[]}`, ".tasks[]", ""},
+		// Large integer ids (beyond 2^53) must survive exactly, not round to a
+		// float. 123456789012345678 would become 123456789012345680 under a
+		// float64 decode; json.Number keeps it intact.
+		{"large integer id preserved", `{"task":{"id":123456789012345678}}`, ".task.id", "123456789012345678\n"},
+		{"large integer arithmetic exact", `{"task":{"id":123456789012345678}}`, ".task.id + 1", "123456789012345679\n"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
