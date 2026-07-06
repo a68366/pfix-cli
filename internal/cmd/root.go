@@ -39,6 +39,9 @@ func NewRootCmd() *cobra.Command {
 	pf.BoolVarP(&g.Quiet, "quiet", "q", false, "Suppress non-essential output")
 	pf.StringVar(&g.JQ, "jq", "", "Filter JSON output with a jq expression")
 
+	// Sole PersistentPreRunE in the tree — cobra runs only the closest such hook,
+	// so a subcommand defining its own would silently suppress this and disable
+	// --jq fail-fast validation.
 	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		return g.PreRun()
 	}
