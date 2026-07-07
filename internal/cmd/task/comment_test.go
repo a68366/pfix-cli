@@ -70,6 +70,42 @@ func TestRunCommentListDefaultTable(t *testing.T) {
 	}
 }
 
+func TestRunCommentListCustomFields(t *testing.T) {
+	var gotBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		gotBody = string(b)
+		io.WriteString(w, `{"result":"success","comments":[{"id":1,"description":"First comment","dateTime":{"datetime":"2024-01-15"}}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &commentListOptions{
+		id:     15,
+		limit:  100,
+		offset: 0,
+		fields: "id,description",
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	if err := runCommentList(context.Background(), o); err != nil {
+		t.Fatalf("runCommentList: %v", err)
+	}
+	if !strings.Contains(gotBody, `"fields":"id,description"`) {
+		t.Errorf("body missing custom fields: %q", gotBody)
+	}
+	result := out.String()
+	if !strings.Contains(result, "ID") {
+		t.Errorf("output missing ID column: %q", result)
+	}
+	if !strings.Contains(result, "DESCRIPTION") {
+		t.Errorf("output missing DESCRIPTION column: %q", result)
+	}
+	if strings.Contains(result, "CREATED") {
+		t.Errorf("output should not contain CREATED column when not in fields override: %q", result)
+	}
+}
+
 func TestRunCommentListLongCommentTruncated(t *testing.T) {
 	// Build a comment longer than 80 runes.
 	longDesc := strings.Repeat("x", 100) // 100 chars > 80 rune limit

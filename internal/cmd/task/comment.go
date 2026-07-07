@@ -38,6 +38,7 @@ type commentListOptions struct {
 	id     int
 	limit  int
 	offset int
+	fields string
 	json   bool
 	quiet  bool
 	jq     string
@@ -57,6 +58,7 @@ func newCommentListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 				return err
 			}
 			o.id = id
+			o.fields = g.Fields
 			o.json = g.JSON
 			o.quiet = g.Quiet
 			o.jq = g.JQ
@@ -71,10 +73,11 @@ func newCommentListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 }
 
 func runCommentList(ctx context.Context, o *commentListOptions) error {
+	fields := cmdutil.FieldsCSV(o.fields, commentListFields)
 	body := map[string]any{
 		"offset":   o.offset,
 		"pageSize": o.limit,
-		"fields":   commentListFields,
+		"fields":   fields,
 	}
 	client, err := o.client()
 	if err != nil {
@@ -101,7 +104,7 @@ func runCommentList(ctx context.Context, o *commentListOptions) error {
 			c["description"] = output.Truncate(d, 80)
 		}
 	}
-	output.Table(o.out, commentColumns, env.Comments, !o.quiet)
+	output.Table(o.out, output.ColumnsFor(fields, commentListFields, commentColumns), env.Comments, !o.quiet)
 	return nil
 }
 
