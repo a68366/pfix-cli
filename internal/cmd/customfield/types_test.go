@@ -20,6 +20,7 @@ func TestTypeName(t *testing.T) {
 		{float64(29), "Totals field"},
 		{float64(30), "30"}, // unknown numeric code → raw number
 		{"weird", "weird"},  // non-numeric → %v defensive
+		{nil, ""},           // missing type key → empty, not "<nil>"
 	}
 	for _, c := range cases {
 		if got := typeName(c.in); got != c.want {
@@ -69,9 +70,9 @@ func TestListFieldsOverrideKeepsTypeRaw(t *testing.T) {
 }
 
 func TestRunTypesDefaultTable(t *testing.T) {
-	var gotMethod, gotPath string
+	var gotMethod, gotPath, gotQuery string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotMethod, gotPath = r.Method, r.URL.Path
+		gotMethod, gotPath, gotQuery = r.Method, r.URL.Path, r.URL.RawQuery
 		io.WriteString(w, `{"result":"success","customFieldTypes":[{"id":0,"name":"Short text"},{"id":1,"name":"Number"}]}`)
 	}))
 	defer srv.Close()
@@ -86,6 +87,9 @@ func TestRunTypesDefaultTable(t *testing.T) {
 	}
 	if gotPath != "/customfield/type" {
 		t.Errorf("path = %q, want /customfield/type", gotPath)
+	}
+	if !strings.Contains(gotQuery, "fields=id%2Cname") && !strings.Contains(gotQuery, "fields=id,name") {
+		t.Errorf("query missing default fields: %q", gotQuery)
 	}
 	result := out.String()
 	for _, want := range []string{"ID", "NAME", "Short text", "Number"} {

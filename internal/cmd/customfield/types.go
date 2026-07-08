@@ -52,6 +52,9 @@ var typeNames = map[int]string{
 // catalog name, falling back to the raw number for an unknown code and to a
 // plain string for any non-numeric value.
 func typeName(v any) string {
+	if v == nil {
+		return ""
+	}
 	f, ok := v.(float64)
 	if !ok {
 		return fmt.Sprintf("%v", v)
