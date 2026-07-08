@@ -53,6 +53,7 @@ type taskFields struct {
 	assignees    []string
 	auditors     []string
 	participants []string
+	customFields []string
 }
 
 // register adds the shared field flags to cmd. withTemplate controls the
@@ -72,6 +73,7 @@ func (f *taskFields) register(cmd *cobra.Command, withTemplate bool) {
 	fl.StringSliceVar(&f.participants, "participants", nil, "Participants: user:N, contact:N, or group:N (comma-separated; replaces the list on update)")
 	fl.StringVar(&f.startDate, "start-date", "", `Start date: YYYY-MM-DD, "YYYY-MM-DD HH:MM", or YYYY-MM-DDTHH:MM (time is interpreted in the account timezone)`)
 	fl.StringVar(&f.endDate, "end-date", "", `End date: YYYY-MM-DD, "YYYY-MM-DD HH:MM", or YYYY-MM-DDTHH:MM (time is interpreted in the account timezone)`)
+	fl.StringArrayVar(&f.customFields, "cf", nil, "Custom field value: <id>=<value> (repeatable; id is the numeric field id)")
 }
 
 // apply validates every flag reported set by `set` (cmd.Flags().Changed) and
@@ -158,4 +160,14 @@ func (f *taskFields) apply(body map[string]any, set func(string) bool) error {
 		body[x.field] = v
 	}
 	return nil
+}
+
+// customFieldSpecs parses the raw --cf values when the flag was set, returning
+// nil when it was not. Structural errors surface here, offline, before any
+// request; value typing happens later against the field definitions.
+func (f *taskFields) customFieldSpecs(set func(string) bool) ([]cmdutil.CustomFieldSpec, error) {
+	if !set("cf") {
+		return nil, nil
+	}
+	return cmdutil.ParseCustomFieldSpecs(f.customFields)
 }

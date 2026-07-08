@@ -78,6 +78,64 @@ func runView(ctx context.Context, o *viewOptions, idStr string) error {
 	if err := cmdutil.DecodeJSON(raw, &env); err != nil {
 		return err
 	}
-	output.Detail(o.out, output.ColumnsFor(fields, viewDefaultFields, viewColumns), env.Task)
+	cols := dropNumericColumns(output.ColumnsFor(fields, viewDefaultFields, viewColumns))
+	output.Detail(o.out, cols, env.Task, customFieldRows(env.Task)...)
 	return nil
+}
+
+// customFieldRows extracts label/value rows from a task's customFieldData array
+// (present only when numeric field ids were requested via --fields). Each entry
+// renders as "field.name = stringValue"; entries without a name are skipped.
+func customFieldRows(task map[string]any) []output.KV {
+	arr, ok := task["customFieldData"].([]any)
+	if !ok {
+		return nil
+	}
+	rows := make([]output.KV, 0, len(arr))
+	for _, e := range arr {
+		entry, ok := e.(map[string]any)
+		if !ok {
+			continue
+		}
+		name := ""
+		if field, ok := entry["field"].(map[string]any); ok {
+			if n, ok := field["name"].(string); ok {
+				name = n
+			}
+		}
+		if name == "" {
+			continue
+		}
+		value := ""
+		if sv, ok := entry["stringValue"].(string); ok {
+			value = sv
+		}
+		rows = append(rows, output.KV{Key: name, Value: value})
+	}
+	return rows
+}
+
+// dropNumericColumns removes columns whose path is a bare custom-field id (all
+// digits) — those values render via customFieldRows, not as a top-level column.
+func dropNumericColumns(cols []output.Column) []output.Column {
+	out := make([]output.Column, 0, len(cols))
+	for _, c := range cols {
+		if isAllDigits(c.Path) {
+			continue
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+func isAllDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }

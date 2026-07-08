@@ -210,3 +210,27 @@ func TestTruncate(t *testing.T) {
 		})
 	}
 }
+
+func TestDetailExtraRows(t *testing.T) {
+	var buf strings.Builder
+	cols := []Column{{Header: "ID", Path: "id"}, {Header: "NAME", Path: "name"}}
+	obj := map[string]any{"id": float64(57), "name": "Task"}
+	Detail(&buf, cols, obj, KV{Key: "test", Value: "updated-value"}, KV{Key: "count", Value: "42"})
+	out := buf.String()
+	for _, want := range []string{"ID", "NAME", "Task", "test", "updated-value", "count", "42"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestDetailNoExtraRowsUnchanged(t *testing.T) {
+	var withArg, withoutArg strings.Builder
+	cols := []Column{{Header: "ID", Path: "id"}}
+	obj := map[string]any{"id": float64(1)}
+	Detail(&withoutArg, cols, obj)
+	Detail(&withArg, cols, obj, []KV{}...)
+	if withoutArg.String() != withArg.String() {
+		t.Errorf("empty extra changed output: %q vs %q", withoutArg.String(), withArg.String())
+	}
+}

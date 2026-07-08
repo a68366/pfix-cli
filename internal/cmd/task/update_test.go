@@ -200,6 +200,7 @@ func TestUpdateInvalidFieldFailsFast(t *testing.T) {
 		{name: "bad date", args: []string{"15", "--start-date", "10-07-2026"}, wantErr: "invalid date"},
 		{name: "bad counterparty", args: []string{"15", "--counterparty", "user:1"}, wantErr: "invalid counterparty"},
 		{name: "zero project", args: []string{"15", "--project", "0"}, wantErr: "--project must be a positive number"},
+		{name: "bad cf", args: []string{"57", "--cf", "abc"}, wantErr: "invalid --cf"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -246,5 +247,52 @@ func TestUpdateBodyFromCommandLine(t *testing.T) {
 	}
 	if !reflect.DeepEqual(body, want) {
 		t.Errorf("body = %#v, want %#v", body, want)
+	}
+}
+
+func TestRunUpdateWithCFOnly(t *testing.T) {
+	var gotBody map[string]any
+	postSeen := false
+	defs := `{"result":"success","customfields":[{"id":88206,"type":0}]}`
+	srv := httptest.NewServer(func() http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == "GET" && r.URL.Path == "/customfield/task":
+				io.WriteString(w, defs)
+			case r.Method == "POST" && r.URL.Path == "/task/57":
+				postSeen = true
+				b, _ := io.ReadAll(r.Body)
+				_ = json.Unmarshal(b, &gotBody)
+				io.WriteString(w, `{"result":"success"}`)
+			default:
+				t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+			}
+		}
+	}())
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &updateOptions{
+		id:      57,
+		body:    map[string]any{},
+		cfSpecs: []cmdutil.CustomFieldSpec{{ID: 88206, Value: "updated-value"}},
+		client:  fakeClient(srv.URL),
+		out:     out,
+	}
+	if err := runUpdate(context.Background(), o); err != nil {
+		t.Fatalf("runUpdate: %v", err)
+	}
+	if !postSeen {
+		t.Fatal("a --cf-only update must still send the task POST (guard must count cfSpecs)")
+	}
+	data, ok := gotBody["customFieldData"].([]any)
+	if !ok || len(data) != 1 {
+		t.Fatalf("customFieldData = %#v, want 1 entry", gotBody["customFieldData"])
+	}
+	if data[0].(map[string]any)["value"] != "updated-value" {
+		t.Errorf("entry value = %#v, want updated-value", data[0])
+	}
+	if out.String() != "Updated task 57\n" {
+		t.Errorf("output = %q", out.String())
 	}
 }
