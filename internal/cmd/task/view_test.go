@@ -123,3 +123,43 @@ func TestRunViewCustomFields(t *testing.T) {
 		t.Errorf("output missing NAME column: %q", result)
 	}
 }
+
+func TestViewRendersCustomFields(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","task":{"id":57,"name":"Task",`+
+			`"customFieldData":[{"field":{"id":88206,"name":"test"},"value":"updated-value","stringValue":"updated-value"}]}}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &viewOptions{fields: "id,name,88206", client: fakeClient(srv.URL), out: out}
+	if err := runView(context.Background(), o, "57"); err != nil {
+		t.Fatalf("runView: %v", err)
+	}
+	got := out.String()
+	if !strings.Contains(got, "test") || !strings.Contains(got, "updated-value") {
+		t.Errorf("output missing custom-field row:\n%s", got)
+	}
+	// The numeric id must not appear as its own column header/label.
+	for _, line := range strings.Split(got, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "88206") {
+			t.Errorf("numeric id column not dropped:\n%s", got)
+		}
+	}
+}
+
+func TestViewNoCustomFields(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","task":{"id":57,"name":"Task"}}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &viewOptions{client: fakeClient(srv.URL), out: out}
+	if err := runView(context.Background(), o, "57"); err != nil {
+		t.Fatalf("runView: %v", err)
+	}
+	if !strings.Contains(out.String(), "Task") {
+		t.Errorf("standard fields missing:\n%s", out.String())
+	}
+}
