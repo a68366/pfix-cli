@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/a68366/pfix-cli/internal/output"
 )
 
 func TestRunViewDefaultDetail(t *testing.T) {
@@ -161,5 +163,105 @@ func TestViewNoCustomFields(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "Task") {
 		t.Errorf("standard fields missing:\n%s", out.String())
+	}
+}
+
+// TestCustomFieldRowsKeyAbsent checks the very first guard in isolation: when
+// the task map has no customFieldData key at all, customFieldRows must
+// return a true nil slice (not just a zero-length one), matching the "no
+// rows appended to Detail" contract runView relies on.
+func TestCustomFieldRowsKeyAbsent(t *testing.T) {
+	got := customFieldRows(map[string]any{"id": 1, "name": "Task"})
+	if got != nil {
+		t.Fatalf("customFieldRows() = %#v, want nil", got)
+	}
+}
+
+// TestCustomFieldRows exercises customFieldRows directly against hand-built
+// map[string]any inputs, covering each defensive branch: an empty
+// customFieldData array, non-map array entries, entries with a missing/
+// absent/non-string field.name, a well-formed entry with no stringValue, and
+// a mixed array where only the valid entry survives.
+func TestCustomFieldRows(t *testing.T) {
+	tests := []struct {
+		name string
+		task map[string]any
+		want []output.KV
+	}{
+		{
+			name: "customFieldData is an empty array",
+			task: map[string]any{"customFieldData": []any{}},
+			want: nil,
+		},
+		{
+			name: "array entries that are not maps are skipped",
+			task: map[string]any{"customFieldData": []any{"not-a-map", 42, true}},
+			want: nil,
+		},
+		{
+			name: "entry missing field key is skipped",
+			task: map[string]any{"customFieldData": []any{
+				map[string]any{"stringValue": "orphan"},
+			}},
+			want: nil,
+		},
+		{
+			name: "entry whose field is not a map is skipped",
+			task: map[string]any{"customFieldData": []any{
+				map[string]any{"field": "not-a-map", "stringValue": "x"},
+			}},
+			want: nil,
+		},
+		{
+			name: "entry whose field.name is missing is skipped",
+			task: map[string]any{"customFieldData": []any{
+				map[string]any{"field": map[string]any{"id": 88206}, "stringValue": "x"},
+			}},
+			want: nil,
+		},
+		{
+			name: "entry whose field.name is non-string is skipped",
+			task: map[string]any{"customFieldData": []any{
+				map[string]any{"field": map[string]any{"name": 123}, "stringValue": "x"},
+			}},
+			want: nil,
+		},
+		{
+			name: "well-formed entry without stringValue renders an empty value",
+			task: map[string]any{"customFieldData": []any{
+				map[string]any{"field": map[string]any{"id": 88206, "name": "Region"}},
+			}},
+			want: []output.KV{{Key: "Region", Value: ""}},
+		},
+		{
+			name: "well-formed entry with stringValue renders name and value",
+			task: map[string]any{"customFieldData": []any{
+				map[string]any{"field": map[string]any{"id": 88206, "name": "Region"}, "stringValue": "EU"},
+			}},
+			want: []output.KV{{Key: "Region", Value: "EU"}},
+		},
+		{
+			name: "mixed array keeps only the valid entry",
+			task: map[string]any{"customFieldData": []any{
+				map[string]any{"field": map[string]any{"name": "Region"}, "stringValue": "EU"},
+				"not-a-map",
+				map[string]any{"field": map[string]any{"id": 2}},
+			}},
+			want: []output.KV{{Key: "Region", Value: "EU"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := customFieldRows(tt.task)
+			if len(got) != len(tt.want) {
+				t.Fatalf("customFieldRows() = %#v, want %#v", got, tt.want)
+			}
+			for i, wantKV := range tt.want {
+				if got[i] != wantKV {
+					t.Errorf("row %d = %#v, want %#v", i, got[i], wantKV)
+				}
+			}
+		})
 	}
 }
