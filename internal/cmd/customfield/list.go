@@ -17,7 +17,7 @@ const listDefaultFields = "id,name,type"
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
-	{Header: "TYPE", Path: "type"},
+	{Header: "TYPE", Path: "type", Format: typeName},
 }
 
 type listOptions struct {
