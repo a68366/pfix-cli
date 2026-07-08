@@ -147,6 +147,15 @@ pfix task update 17 --status 2
 pfix task update 17 --name "Renamed" --description "new body"
 pfix task update 17 --assignees user:1 --priority Urgent --start-date "2026-07-08 10:00"
 
+# Set custom fields (id is the numeric custom-field id; repeatable)
+pfix task create --template 6 --name "Lead" --cf 88206=hello --cf 85984=42
+
+# Update a custom field
+pfix task update 57 --cf 88206=updated-value
+
+# Read custom fields back — request the numeric ids via --fields
+pfix task view 57 --fields id,name,88206
+
 # Comments
 pfix task comment list 17
 pfix task comment add 17 --body "Looks good"
@@ -170,6 +179,15 @@ Notes:
   silently fall back to `NotUrgent` on anything else).
 - `--counterparty` takes a contact id or `contact:N`. `--template` exists only
   on `create`; a task's template cannot be changed afterwards.
+- `--cf <id>=<value>` sets a custom-field value (repeatable); `id` is the
+  numeric field id from `pfix customfield list task`. The value is typed from
+  the field definition: short/multiline text is sent as a string, a number
+  field as a number, and a list/enum field as an option id. Other field types
+  (dates, checkboxes, references, multi-select) aren't covered — set them via
+  `pfix api`. The field must be attached to the task's template/process, or
+  the API accepts the write and silently stores nothing. To read a custom
+  field back on `task view`, request its numeric id via `--fields`; it renders
+  as an extra `name = value` row below the table.
 
 ### Projects
 
