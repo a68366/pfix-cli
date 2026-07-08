@@ -153,6 +153,12 @@ pfix task create --template 6 --name "Lead" --cf 88206=hello --cf 85984=42
 # Update a custom field
 pfix task update 57 --cf 88206=updated-value
 
+# A list field takes an option label, not a number
+pfix task update 57 --cf 88210=Urgent
+
+# Quote the whole pair if the label contains spaces
+pfix task update 57 --cf "88210=Waiting for reply"
+
 # Read custom fields back — request the numeric ids via --fields
 pfix task view 57 --fields id,name,88206
 
@@ -182,12 +188,17 @@ Notes:
 - `--cf <id>=<value>` sets a custom-field value (repeatable); `id` is the
   numeric field id from `pfix customfield list task`. The value is typed from
   the field definition: short/multiline text is sent as a string, a number
-  field as a number, and a list/enum field as an option id. Other field types
-  (dates, checkboxes, references, multi-select) aren't covered — set them via
-  `pfix api`. The field must be attached to the task's template/process, or
-  the API accepts the write and silently stores nothing. To read a custom
-  field back on `task view`, request its numeric id via `--fields`; it renders
-  as an extra `name = value` row below the table.
+  field as a number, and a **list** field as one of its option **labels** (a
+  list has no option ids over REST). pfix checks the label against the field's
+  options and refuses an unknown one — the API itself validates nothing and
+  would store whatever it is given as a meaningless free-text value. A label
+  is matched exactly: no trimming, no case folding. Labels may contain spaces,
+  so quote the whole pair — `--cf "88210=Waiting for reply"`. Other
+  field types (dates, checkboxes, references, multi-select) aren't covered —
+  set them via `pfix api`. The field must be attached to the task's
+  template/process, or the API accepts the write and silently stores nothing.
+  To read a custom field back on `task view`, request its numeric id via
+  `--fields`; it renders as an extra `name = value` row below the table.
 
 ### Projects
 

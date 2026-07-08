@@ -266,7 +266,8 @@ func cfRouter(t *testing.T, defs string, gotBody *map[string]any, postSeen *bool
 func TestRunCreateWithCF(t *testing.T) {
 	var gotBody map[string]any
 	postSeen := false
-	defs := `{"result":"success","customfields":[{"id":88206,"type":0},{"id":85984,"type":1},{"id":88210,"type":8}]}`
+	defs := `{"result":"success","customfields":[{"id":88206,"type":0},{"id":85984,"type":1},` +
+		`{"id":88210,"name":"list","type":8,"enumValues":["1","2","3","four"]}]}`
 	srv := httptest.NewServer(cfRouter(t, defs, &gotBody, &postSeen))
 	defer srv.Close()
 
@@ -276,7 +277,7 @@ func TestRunCreateWithCF(t *testing.T) {
 		cfSpecs: []cmdutil.CustomFieldSpec{
 			{ID: 88206, Value: "hello"},
 			{ID: 85984, Value: "42"},
-			{ID: 88210, Value: "5"},
+			{ID: 88210, Value: "four"},
 		},
 		client: fakeClient(srv.URL),
 		out:    out,
@@ -297,10 +298,10 @@ func TestRunCreateWithCF(t *testing.T) {
 	if data[1].(map[string]any)["value"] != float64(42) {
 		t.Errorf("entry 1 value = %#v, want 42", data[1])
 	}
-	// enum -> {"id":5}
+	// list -> the option label, as a bare string
 	e2 := data[2].(map[string]any)
-	if e2["value"].(map[string]any)["id"] != float64(5) {
-		t.Errorf("entry 2 = %#v, want value {id:5}", e2)
+	if e2["value"] != "four" {
+		t.Errorf("entry 2 = %#v, want value \"four\"", e2)
 	}
 }
 
