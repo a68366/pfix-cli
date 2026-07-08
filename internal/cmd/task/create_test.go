@@ -228,6 +228,7 @@ func TestCreateInvalidFieldFailsFast(t *testing.T) {
 		{name: "bad people ref", args: []string{"--name", "x", "--assignees", "12"}, wantErr: "invalid people reference"},
 		{name: "bad date", args: []string{"--name", "x", "--end-date", "tomorrow"}, wantErr: "invalid date"},
 		{name: "zero template", args: []string{"--name", "x", "--template", "0"}, wantErr: "--template must be a positive number"},
+		{name: "bad cf", args: []string{"--name", "x", "--cf", "abc"}, wantErr: "invalid --cf"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -241,5 +242,103 @@ func TestCreateInvalidFieldFailsFast(t *testing.T) {
 				t.Fatalf("err = %v, want it to contain %q", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// cfRouter serves the customfield defs GET and captures the task POST body.
+func cfRouter(t *testing.T, defs string, gotBody *map[string]any, postSeen *bool) http.HandlerFunc {
+	t.Helper()
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == "GET" && r.URL.Path == "/customfield/task":
+			io.WriteString(w, defs)
+		case r.Method == "POST":
+			*postSeen = true
+			b, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(b, gotBody)
+			io.WriteString(w, `{"result":"success","id":57}`)
+		default:
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	}
+}
+
+func TestRunCreateWithCF(t *testing.T) {
+	var gotBody map[string]any
+	postSeen := false
+	defs := `{"result":"success","customfields":[{"id":88206,"type":0},{"id":85984,"type":1},{"id":88210,"type":8}]}`
+	srv := httptest.NewServer(cfRouter(t, defs, &gotBody, &postSeen))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &createOptions{
+		body: map[string]any{"name": "T"},
+		cfSpecs: []cmdutil.CustomFieldSpec{
+			{ID: 88206, Value: "hello"},
+			{ID: 85984, Value: "42"},
+			{ID: 88210, Value: "5"},
+		},
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	if err := runCreate(context.Background(), o); err != nil {
+		t.Fatalf("runCreate: %v", err)
+	}
+	data, ok := gotBody["customFieldData"].([]any)
+	if !ok || len(data) != 3 {
+		t.Fatalf("customFieldData = %#v, want 3 entries", gotBody["customFieldData"])
+	}
+	// text -> string
+	e0 := data[0].(map[string]any)
+	if e0["field"].(map[string]any)["id"] != float64(88206) || e0["value"] != "hello" {
+		t.Errorf("entry 0 = %#v", e0)
+	}
+	// number -> JSON number
+	if data[1].(map[string]any)["value"] != float64(42) {
+		t.Errorf("entry 1 value = %#v, want 42", data[1])
+	}
+	// enum -> {"id":5}
+	e2 := data[2].(map[string]any)
+	if e2["value"].(map[string]any)["id"] != float64(5) {
+		t.Errorf("entry 2 = %#v, want value {id:5}", e2)
+	}
+}
+
+func TestRunCreateCFUnknownID(t *testing.T) {
+	var gotBody map[string]any
+	postSeen := false
+	defs := `{"result":"success","customfields":[{"id":88206,"type":0}]}`
+	srv := httptest.NewServer(cfRouter(t, defs, &gotBody, &postSeen))
+	defer srv.Close()
+
+	o := &createOptions{
+		body:    map[string]any{"name": "T"},
+		cfSpecs: []cmdutil.CustomFieldSpec{{ID: 999, Value: "x"}},
+		client:  fakeClient(srv.URL),
+		out:     io.Discard,
+	}
+	err := runCreate(context.Background(), o)
+	if err == nil || !strings.Contains(err.Error(), "no custom field 999 for task") {
+		t.Fatalf("err = %v, want unknown-id error", err)
+	}
+	if postSeen {
+		t.Error("no task POST should be sent when a cf id is unknown")
+	}
+}
+
+func TestCreateCFCommaPreserved(t *testing.T) {
+	f := &taskFields{}
+	cmd := &cobra.Command{}
+	f.register(cmd, true)
+	if err := cmd.Flags().Parse([]string{"--cf", "88206=a, b"}); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	specs, err := f.customFieldSpecs(cmd.Flags().Changed)
+	if err != nil {
+		t.Fatalf("customFieldSpecs: %v", err)
+	}
+	want := []cmdutil.CustomFieldSpec{{ID: 88206, Value: "a, b"}}
+	if !reflect.DeepEqual(specs, want) {
+		t.Errorf("specs = %#v, want %#v", specs, want)
 	}
 }

@@ -13,12 +13,13 @@ import (
 )
 
 type createOptions struct {
-	body   map[string]any
-	json   bool
-	quiet  bool
-	jq     string
-	client func() (*planfix.Client, error)
-	out    io.Writer
+	body    map[string]any
+	cfSpecs []cmdutil.CustomFieldSpec
+	json    bool
+	quiet   bool
+	jq      string
+	client  func() (*planfix.Client, error)
+	out     io.Writer
 }
 
 func newCreateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
@@ -33,13 +34,18 @@ func newCreateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			specs, err := f.customFieldSpecs(cmd.Flags().Changed)
+			if err != nil {
+				return err
+			}
 			o := &createOptions{
-				body:   body,
-				json:   g.JSON,
-				quiet:  g.Quiet,
-				jq:     g.JQ,
-				client: g.ClientFunc(),
-				out:    cmd.OutOrStdout(),
+				body:    body,
+				cfSpecs: specs,
+				json:    g.JSON,
+				quiet:   g.Quiet,
+				jq:      g.JQ,
+				client:  g.ClientFunc(),
+				out:     cmd.OutOrStdout(),
 			}
 			return runCreate(cmd.Context(), o)
 		},
@@ -68,6 +74,13 @@ func runCreate(ctx context.Context, o *createOptions) error {
 	client, err := o.client()
 	if err != nil {
 		return err
+	}
+	if len(o.cfSpecs) > 0 {
+		data, err := cmdutil.BuildCustomFieldData(ctx, client, "task", o.cfSpecs)
+		if err != nil {
+			return err
+		}
+		o.body["customFieldData"] = data
 	}
 	raw, err := client.JSON(ctx, "POST", "task/", o.body)
 	if err != nil {

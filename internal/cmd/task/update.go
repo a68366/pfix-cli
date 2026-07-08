@@ -14,13 +14,14 @@ import (
 )
 
 type updateOptions struct {
-	id     int
-	body   map[string]any
-	json   bool
-	quiet  bool
-	jq     string
-	client func() (*planfix.Client, error)
-	out    io.Writer
+	id      int
+	body    map[string]any
+	cfSpecs []cmdutil.CustomFieldSpec
+	json    bool
+	quiet   bool
+	jq      string
+	client  func() (*planfix.Client, error)
+	out     io.Writer
 }
 
 func newUpdateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
@@ -39,14 +40,19 @@ func newUpdateCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			specs, err := f.customFieldSpecs(cmd.Flags().Changed)
+			if err != nil {
+				return err
+			}
 			o := &updateOptions{
-				id:     id,
-				body:   body,
-				json:   g.JSON,
-				quiet:  g.Quiet,
-				jq:     g.JQ,
-				client: g.ClientFunc(),
-				out:    cmd.OutOrStdout(),
+				id:      id,
+				body:    body,
+				cfSpecs: specs,
+				json:    g.JSON,
+				quiet:   g.Quiet,
+				jq:      g.JQ,
+				client:  g.ClientFunc(),
+				out:     cmd.OutOrStdout(),
 			}
 			return runUpdate(cmd.Context(), o)
 		},
@@ -74,13 +80,20 @@ func updateBody(name, description string, f *taskFields, changed func(string) bo
 }
 
 func runUpdate(ctx context.Context, o *updateOptions) error {
-	if len(o.body) == 0 {
+	if len(o.body) == 0 && len(o.cfSpecs) == 0 {
 		return fmt.Errorf("at least one field flag is required (see --help)")
 	}
 
 	client, err := o.client()
 	if err != nil {
 		return err
+	}
+	if len(o.cfSpecs) > 0 {
+		data, err := cmdutil.BuildCustomFieldData(ctx, client, "task", o.cfSpecs)
+		if err != nil {
+			return err
+		}
+		o.body["customFieldData"] = data
 	}
 	path := "task/" + strconv.Itoa(o.id)
 	raw, err := client.JSON(ctx, "POST", path, o.body)
