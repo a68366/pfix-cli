@@ -41,7 +41,7 @@ func TestFlatten(t *testing.T) {
 }
 
 func TestTable(t *testing.T) {
-	cols := []Column{{"ID", "id"}, {"NAME", "name"}, {"STATUS", "status.name"}}
+	cols := []Column{{Header: "ID", Path: "id"}, {Header: "NAME", Path: "name"}, {Header: "STATUS", Path: "status.name"}}
 	rows := []map[string]any{
 		{"id": float64(1), "name": "A", "status": map[string]any{"name": "New"}},
 		{"id": float64(2), "name": "B", "status": map[string]any{"name": "Done"}},
@@ -60,6 +60,31 @@ func TestTable(t *testing.T) {
 	Table(&b, cols, rows, false)
 	if strings.Contains(b.String(), "ID\t") || strings.HasPrefix(b.String(), "ID") {
 		t.Fatalf("header should be suppressed: %q", b.String())
+	}
+}
+
+func TestTableFormat(t *testing.T) {
+	cols := []Column{
+		{Header: "ID", Path: "id"},
+		{Header: "TYPE", Path: "type", Format: func(v any) string {
+			if f, ok := v.(float64); ok && f == 1 {
+				return "Number"
+			}
+			return "?"
+		}},
+	}
+	rows := []map[string]any{{"id": float64(99), "type": float64(1)}}
+	var b bytes.Buffer
+	Table(&b, cols, rows, false)
+	out := b.String()
+	if !strings.Contains(out, "Number") {
+		t.Errorf("Format not applied, want decoded 'Number': %q", out)
+	}
+	if strings.Contains(out, "1") {
+		t.Errorf("raw type code 1 leaked instead of being formatted: %q", out)
+	}
+	if !strings.Contains(out, "99") {
+		t.Errorf("nil-Format column should still render raw id 99: %q", out)
 	}
 }
 
@@ -85,10 +110,10 @@ func TestJSONInvalidPassthrough(t *testing.T) {
 
 func TestDetail(t *testing.T) {
 	cols := []Column{
-		{"ID", "id"},
-		{"NAME", "name"},
-		{"STATUS", "status.name"},
-		{"DESCRIPTION", "description"},
+		{Header: "ID", Path: "id"},
+		{Header: "NAME", Path: "name"},
+		{Header: "STATUS", Path: "status.name"},
+		{Header: "DESCRIPTION", Path: "description"},
 	}
 	obj := map[string]any{
 		"id":          float64(15),
@@ -127,6 +152,10 @@ func TestDetail(t *testing.T) {
 	}
 }
 
+// colEq compares the data fields of two Columns (Column is not comparable with
+// == because it holds a func field).
+func colEq(a, b Column) bool { return a.Header == b.Header && a.Path == b.Path }
+
 func TestColumnsFor(t *testing.T) {
 	defCols := []Column{
 		{Header: "ID", Path: "id"},
@@ -136,7 +165,7 @@ func TestColumnsFor(t *testing.T) {
 
 	// When fields == def, should return defCols unchanged.
 	got := ColumnsFor(def, def, defCols)
-	if len(got) != len(defCols) || got[0] != defCols[0] || got[1] != defCols[1] {
+	if len(got) != len(defCols) || !colEq(got[0], defCols[0]) || !colEq(got[1], defCols[1]) {
 		t.Errorf("ColumnsFor(def, def, defCols) = %v, want %v", got, defCols)
 	}
 
@@ -151,7 +180,7 @@ func TestColumnsFor(t *testing.T) {
 		t.Fatalf("len = %d, want %d; got %v", len(got), len(want), got)
 	}
 	for i := range want {
-		if got[i] != want[i] {
+		if !colEq(got[i], want[i]) {
 			t.Errorf("col[%d] = %v, want %v", i, got[i], want[i])
 		}
 	}

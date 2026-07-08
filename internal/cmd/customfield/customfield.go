@@ -12,6 +12,6 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Use:   "customfield",
 		Short: "List Planfix custom-field definitions for an object type",
 	}
-	cmd.AddCommand(newListCmd(g))
+	cmd.AddCommand(newListCmd(g), newTypesCmd(g))
 	return cmd
 }

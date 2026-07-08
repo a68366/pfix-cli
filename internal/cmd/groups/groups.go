@@ -1,4 +1,7 @@
-package customfield
+// Package groups implements the shared `groups` subcommand that lists the
+// groups configured for a resource type (GET /<type>/groups; envelope
+// "groups"; columns ID/NAME). It backs `user groups` and `contact groups`.
+package groups
 
 import (
 	"context"
@@ -12,12 +15,11 @@ import (
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
-const listDefaultFields = "id,name,type"
+const listDefaultFields = "id,name"
 
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
-	{Header: "TYPE", Path: "type", Format: typeName},
 }
 
 type listOptions struct {
@@ -30,14 +32,16 @@ type listOptions struct {
 	out        io.Writer
 }
 
-func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
-	o := &listOptions{}
+// NewCmd builds the `groups` subcommand for the given object type ("user" or
+// "contact"). objectType is a fixed internal literal, not user input, so it
+// needs no validation and is URL-safe by construction.
+func NewCmd(g *cmdutil.GlobalOpts, objectType string) *cobra.Command {
+	o := &listOptions{objectType: objectType}
 	cmd := &cobra.Command{
-		Use:   "list <type>",
-		Short: "List custom fields for an object type (task, contact, project, ...)",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			o.objectType = args[0]
+		Use:   "groups",
+		Short: "List " + objectType + " groups",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			o.json, o.fields, o.quiet = g.JSON, g.Fields, g.Quiet
 			o.jq = g.JQ
 			o.client = g.ClientFunc()
@@ -49,11 +53,8 @@ func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 }
 
 func runList(ctx context.Context, o *listOptions) error {
-	if err := cmdutil.ValidateObjectType(o.objectType); err != nil {
-		return err
-	}
 	fields := cmdutil.FieldsCSV(o.fields, listDefaultFields)
-	path := "customfield/" + o.objectType + "?fields=" + url.QueryEscape(fields)
+	path := o.objectType + "/groups?fields=" + url.QueryEscape(fields)
 	client, err := o.client()
 	if err != nil {
 		return err
@@ -66,11 +67,11 @@ func runList(ctx context.Context, o *listOptions) error {
 		return output.EmitJSON(o.out, raw, o.jq)
 	}
 	var env struct {
-		CustomFields []map[string]any `json:"customfields"`
+		Groups []map[string]any `json:"groups"`
 	}
 	if err := cmdutil.DecodeJSON(raw, &env); err != nil {
 		return err
 	}
-	output.Table(o.out, output.ColumnsFor(fields, listDefaultFields, listColumns), env.CustomFields, !o.quiet)
+	output.Table(o.out, output.ColumnsFor(fields, listDefaultFields, listColumns), env.Groups, !o.quiet)
 	return nil
 }

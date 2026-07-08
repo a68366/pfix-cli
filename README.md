@@ -211,6 +211,7 @@ Planfix UI.
 pfix contact list                                   # table; --limit / --offset page
 pfix contact view 42                                # detail block (--json for everything)
 pfix contact processes                              # list contact processes (ID / NAME)
+pfix contact groups                                 # contact groups / categories (ID / NAME)
 pfix contact create --name "Ada" --lastname "Lovelace" --template 1 --email ada@example.com
 pfix contact update 42 --email new@example.com --lastname "Byron"
 ```
@@ -223,6 +224,8 @@ Planfix staff/users, read-only (the API does not allow creating users):
 pfix user list                       # table; --limit / --offset page
 pfix user view 1                     # detail block (--json for everything)
 pfix user list --fields id,name,role # choose columns
+pfix user groups                     # employee groups — the group:N refs used by --assignees
+pfix user positions                  # job positions (ID / NAME)
 ```
 
 ### Reports
@@ -260,7 +263,11 @@ List the custom-field definitions for an object type (read-only):
 ```sh
 pfix customfield list task        # custom fields defined on tasks
 pfix customfield list contact     # (empty if none are defined)
+pfix customfield list task        # TYPE column shows the type name (e.g. "Number")
+pfix customfield types            # the custom-field type catalog (ID / NAME)
 ```
+
+The `TYPE` column of `customfield list` shows the decoded type name in the default view; with `--fields` (or `--json`) the raw numeric code is shown.
 
 ### Data tags
 

@@ -3,6 +3,7 @@ package user
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/a68366/pfix-cli/internal/cmd/groups"
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 )
 
@@ -12,6 +13,9 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Use:   "user",
 		Short: "Work with Planfix users",
 	}
-	cmd.AddCommand(newListCmd(g), newViewCmd(g))
+	ug := groups.NewCmd(g, "user")
+	ug.Short = "List user (employee) groups"
+	ug.Long = "List user (employee) groups — the group:N values accepted by --assignees/--auditors/--participants."
+	cmd.AddCommand(newListCmd(g), newViewCmd(g), ug, newPositionsCmd(g))
 	return cmd
 }

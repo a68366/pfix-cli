@@ -16,23 +16,33 @@ import (
 type Column struct {
 	Header string
 	Path   string
+	// Format, when non-nil, renders the raw value at Path (as returned by
+	// valueAt) instead of the default Flatten. Honored by Table only; Detail
+	// ignores it. Adding this func field makes Column non-comparable.
+	Format func(v any) string
 }
 
-// Flatten extracts the value at a dot-path from decoded JSON (map[string]any /
-// []any / scalars) and renders it as a single-line string.
-func Flatten(v any, path string) string {
+// valueAt walks a dot-path into decoded JSON (map[string]any / []any / scalars)
+// and returns the raw value, or nil if any segment is missing.
+func valueAt(v any, path string) any {
 	cur := v
 	for _, key := range strings.Split(path, ".") {
 		m, ok := cur.(map[string]any)
 		if !ok {
-			return ""
+			return nil
 		}
 		cur, ok = m[key]
 		if !ok {
-			return ""
+			return nil
 		}
 	}
-	return render(cur)
+	return cur
+}
+
+// Flatten extracts the value at a dot-path from decoded JSON and renders it as a
+// single-line string.
+func Flatten(v any, path string) string {
+	return render(valueAt(v, path))
 }
 
 func render(v any) string {
@@ -83,7 +93,11 @@ func Table(w io.Writer, cols []Column, rows []map[string]any, showHeader bool) {
 	for _, row := range rows {
 		cells := make([]string, len(cols))
 		for i, c := range cols {
-			cells[i] = clean(Flatten(row, c.Path))
+			if c.Format != nil {
+				cells[i] = clean(c.Format(valueAt(row, c.Path)))
+			} else {
+				cells[i] = clean(Flatten(row, c.Path))
+			}
 		}
 		fmt.Fprintln(tw, strings.Join(cells, "\t"))
 	}
