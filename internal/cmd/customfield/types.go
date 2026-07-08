@@ -1,8 +1,17 @@
 package customfield
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"net/url"
 	"strconv"
+
+	"github.com/spf13/cobra"
+
+	"github.com/a68366/pfix-cli/internal/cmdutil"
+	"github.com/a68366/pfix-cli/internal/output"
+	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
 // typeNames maps the Planfix custom-field type code to its display name.
@@ -52,4 +61,61 @@ func typeName(v any) string {
 		return n
 	}
 	return strconv.Itoa(code)
+}
+
+const typesDefaultFields = "id,name"
+
+var typesColumns = []output.Column{
+	{Header: "ID", Path: "id"},
+	{Header: "NAME", Path: "name"},
+}
+
+type typesOptions struct {
+	json   bool
+	fields string
+	quiet  bool
+	jq     string
+	client func() (*planfix.Client, error)
+	out    io.Writer
+}
+
+func newTypesCmd(g *cmdutil.GlobalOpts) *cobra.Command {
+	o := &typesOptions{}
+	cmd := &cobra.Command{
+		Use:   "types",
+		Short: "List the custom-field type catalog",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			o.json, o.fields, o.quiet = g.JSON, g.Fields, g.Quiet
+			o.jq = g.JQ
+			o.client = g.ClientFunc()
+			o.out = cmd.OutOrStdout()
+			return runTypes(cmd.Context(), o)
+		},
+	}
+	return cmd
+}
+
+func runTypes(ctx context.Context, o *typesOptions) error {
+	fields := cmdutil.FieldsCSV(o.fields, typesDefaultFields)
+	path := "customfield/type?fields=" + url.QueryEscape(fields)
+	client, err := o.client()
+	if err != nil {
+		return err
+	}
+	raw, err := client.JSON(ctx, "GET", path, nil)
+	if err != nil {
+		return err
+	}
+	if o.json {
+		return output.EmitJSON(o.out, raw, o.jq)
+	}
+	var env struct {
+		Types []map[string]any `json:"customFieldTypes"`
+	}
+	if err := cmdutil.DecodeJSON(raw, &env); err != nil {
+		return err
+	}
+	output.Table(o.out, output.ColumnsFor(fields, typesDefaultFields, typesColumns), env.Types, !o.quiet)
+	return nil
 }

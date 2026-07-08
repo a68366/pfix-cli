@@ -30,7 +30,7 @@ func TestTypeName(t *testing.T) {
 
 func TestListDecodesType(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, `{"result":"success","customfields":[{"id":1,"name":"Sum","type":1},{"id":2,"name":"Mystery","type":30}]}`)
+		io.WriteString(w, `{"result":"success","customfields":[{"id":99,"name":"Sum","type":1},{"id":2,"name":"Mystery","type":30}]}`)
 	}))
 	defer srv.Close()
 
@@ -50,7 +50,7 @@ func TestListDecodesType(t *testing.T) {
 
 func TestListFieldsOverrideKeepsTypeRaw(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, `{"result":"success","customfields":[{"id":1,"name":"Sum","type":1}]}`)
+		io.WriteString(w, `{"result":"success","customfields":[{"id":99,"name":"Sum","type":1}]}`)
 	}))
 	defer srv.Close()
 
@@ -65,5 +65,45 @@ func TestListFieldsOverrideKeepsTypeRaw(t *testing.T) {
 	}
 	if !strings.Contains(result, "1") {
 		t.Errorf("--fields override should show raw code 1: %q", result)
+	}
+}
+
+func TestRunTypesDefaultTable(t *testing.T) {
+	var gotMethod, gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		io.WriteString(w, `{"result":"success","customFieldTypes":[{"id":0,"name":"Short text"},{"id":1,"name":"Number"}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &typesOptions{client: fakeClient(srv.URL), out: out}
+	if err := runTypes(context.Background(), o); err != nil {
+		t.Fatalf("runTypes: %v", err)
+	}
+	if gotMethod != "GET" {
+		t.Errorf("method = %q, want GET", gotMethod)
+	}
+	if gotPath != "/customfield/type" {
+		t.Errorf("path = %q, want /customfield/type", gotPath)
+	}
+	result := out.String()
+	for _, want := range []string{"ID", "NAME", "Short text", "Number"} {
+		if !strings.Contains(result, want) {
+			t.Errorf("output missing %q: %q", want, result)
+		}
+	}
+}
+
+func TestCustomfieldCmdRegistersTypes(t *testing.T) {
+	cmd := NewCmd(nil)
+	found := false
+	for _, c := range cmd.Commands() {
+		if c.Name() == "types" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("customfield command missing subcommand %q", "types")
 	}
 }
