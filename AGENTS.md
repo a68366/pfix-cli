@@ -24,7 +24,15 @@ Milestones 1–20 are implemented and merged to `main`:
 - **M19:** task custom-field values — a repeatable `--cf <id>=<value>` on `task create`/`task update` and rendered custom-field rows on `task view`. Values are typed from the field definition: pfix does one `GET /customfield/task` to map each id to its type code, then formats short/multiline text as a string, number as a JSON number, and list/enum as `{"id":optId}` (unsupported type codes error, pointing to `pfix api`). Unknown ids and type mismatches fail before the write; the field must be bound to the task's template/process or the API drops the value silently (documented, not detected). `task view` renders `customFieldData` as `field.name = stringValue` when the numeric ids are requested via `--fields`, dropping the numeric-id columns from the table. Shared `cmdutil.ParseCustomFieldSpecs`/`BuildCustomFieldData`; `output.Detail` gained trailing `extra ...KV` rows.
 - **M20:** lookup endpoints — `user groups`, `user positions`, `contact groups` (shared `internal/cmd/groups` package, `GET /<type>/groups`; envelope `groups`), `customfield types` (`GET /customfield/type`; envelope `customFieldTypes`), and a TYPE-name decode in `customfield list` via a new optional `output.Column.Format` hook + an embedded `typeNames` catalog. All read-only, GET-based; only `user/groups` resolves the assignee `group:N` refs (recon: `contact/groups` are categories, `project/groups`/`directory/groups` empty).
 
-All tested. Still to come: `directory`/`file` as access allows. `process` mutation and running processes/workflow actions are not exposed via REST (postponed); deletes, `user update`, typed filter flags, and color were declined by the user. Keep this file in sync as code lands.
+All tested. Keep this file in sync as code lands — completed work is logged above and in **Build order**; planned, postponed, and declined work lives in **Roadmap** below.
+
+## Roadmap
+
+Kept separate from the milestone log above so landing a new milestone only appends to **Status** and **Build order** — this section changes on its own schedule.
+
+- **Next (as API access allows):** typed `directory` and `file` resources.
+- **Postponed — not exposed via REST:** `process` mutation and running processes / workflow actions. (Process *listing/status* endpoints already back task status discovery; see M18 and M20.)
+- **Declined by the user:** deletes, `user update`, typed filter flags, and color.
 
 ## Project rules
 
@@ -53,9 +61,6 @@ Implemented:
 - `internal/config/` — profile load/save (atomic, mode 0600) and value precedence (`Resolve`, `ResolveProfileName`).
 - `internal/buildinfo/` — version/commit/date injected at build time.
 
-Planned (not yet present):
-- Further typed resources as needed (`datatag`, `directory`, `file`).
-
 ## Build order
 
 1. **Done (M1):** `auth` + generic `api` — credentials/profiles plus the raw passthrough make every endpoint reachable immediately.
@@ -78,7 +83,6 @@ Planned (not yet present):
 18. **Done (M18):** task status discovery (`task statuses`, `task processes`, `contact processes`) + `--status 0` (Draft) fix.
 19. **Done (M19):** task custom-field values (`--cf` on create/update; rendered on view; type-aware via `GET /customfield/task`).
 20. **Done (M20):** lookup endpoints (`user groups`, `user positions`, `contact groups`, `customfield types`) + a TYPE-name decode in `customfield list` via the new `output.Column.Format` hook.
-21. **Next:** `directory`/`file` as access allows. Process listing/status endpoints (`GET /process/task`, `GET /process/task/{id}/statuses`, `GET /process/contact`) back status discovery; process mutation and running processes/workflow actions stay postponed (not in REST).
 
 ## Conventions
 
