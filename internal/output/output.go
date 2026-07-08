@@ -90,11 +90,21 @@ func Table(w io.Writer, cols []Column, rows []map[string]any, showHeader bool) {
 	tw.Flush()
 }
 
-// Detail writes a single object as aligned KEY value lines.
-func Detail(w io.Writer, cols []Column, obj map[string]any) {
+// KV is a label/value pair for Detail's extra trailing rows.
+type KV struct {
+	Key   string
+	Value string
+}
+
+// Detail writes a single object as aligned KEY value lines, followed by any
+// extra rows (e.g. custom-field values) in the same aligned block.
+func Detail(w io.Writer, cols []Column, obj map[string]any, extra ...KV) {
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 	for _, c := range cols {
 		fmt.Fprintf(tw, "%s\t%s\n", c.Header, clean(Flatten(obj, c.Path)))
+	}
+	for _, kv := range extra {
+		fmt.Fprintf(tw, "%s\t%s\n", clean(kv.Key), clean(kv.Value))
 	}
 	tw.Flush()
 }
