@@ -36,7 +36,7 @@ Kept separate from the milestone log above so landing a new milestone only appen
 
 ## Project rules
 
-- **Public and vendor-neutral.** Describe pfix's behavior on its own terms. Committed artifacts (code, comments, docstrings, identifiers, fixtures, docs, README, commit messages) must not name, reference, or compare against other products or tools, and must not include copied or cited third-party material.
+- **Public and vendor-neutral.** Describe pfix's behavior on its own terms. Committed artifacts (code, comments, docstrings, identifiers, fixtures, docs, README, commit messages) must not name, reference, or compare against other products or tools, and must not include copied or cited third-party material. (Sole exception: a committed `CLAUDE.md` whose entire content is the import line `@AGENTS.md`, so agent tooling that looks for that filename loads this vendor-neutral file instead. `AGENTS.md` is the canonical, tool-agnostic source; `CLAUDE.md` is only a pointer to it.)
 - **Unofficial.** pfix is an independent project with no affiliation to Planfix. Keep the disclaimers in README.md and this file accurate.
 - **Public dependencies only.** Every dependency must be installable from public sources. No private package indexes or internal libraries.
 - **License:** Apache-2.0.
