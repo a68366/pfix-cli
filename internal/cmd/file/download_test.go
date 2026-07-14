@@ -60,6 +60,49 @@ func TestDownloadByteExactToAutoName(t *testing.T) {
 	}
 }
 
+func TestDownloadToDirectoryTarget(t *testing.T) {
+	body := []byte{0x89, 'P', 'N', 'G', 0xff} // no trailing newline
+	srv := downloadServer(t, body, 0)
+	defer srv.Close()
+
+	dir := t.TempDir()
+	errOut := &strings.Builder{}
+	o := baseDownloadOpts(srv.URL, &strings.Builder{}, errOut)
+	o.output = dir
+	if err := runDownload(context.Background(), o); err != nil {
+		t.Fatalf("runDownload: %v", err)
+	}
+	got, err := os.ReadFile(filepath.Join(dir, "pic.png"))
+	if err != nil {
+		t.Fatalf("read saved file: %v", err)
+	}
+	if string(got) != string(body) {
+		t.Fatalf("saved bytes = %v, want %v", got, body)
+	}
+	if !strings.Contains(errOut.String(), "Saved") {
+		t.Errorf("missing Saved note: %q", errOut.String())
+	}
+
+	// A trailing path separator resolves the same way, even for a path that
+	// does not yet exist.
+	dir2 := filepath.Join(t.TempDir(), "sub") + string(os.PathSeparator)
+	o2 := baseDownloadOpts(srv.URL, &strings.Builder{}, &strings.Builder{})
+	o2.output = dir2
+	if err := os.MkdirAll(dir2, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := runDownload(context.Background(), o2); err != nil {
+		t.Fatalf("runDownload (trailing separator): %v", err)
+	}
+	got2, err := os.ReadFile(filepath.Join(dir2, "pic.png"))
+	if err != nil {
+		t.Fatalf("read saved file (trailing separator): %v", err)
+	}
+	if string(got2) != string(body) {
+		t.Fatalf("saved bytes (trailing separator) = %v, want %v", got2, body)
+	}
+}
+
 func TestDownloadToStdout(t *testing.T) {
 	body := []byte("RAWBYTES")
 	srv := downloadServer(t, body, 0)
