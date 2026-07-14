@@ -175,7 +175,8 @@ Notes:
   with `pfix task statuses <id>` (or `--process <id>`). `--status 0` is the
   Draft status: it can be set at create time, but the API will not move an
   existing task back to Draft on update. Field names for `--fields` are Planfix
-  REST field names; unknown names are silently ignored by the API.
+  REST field names; unknown names are silently ignored by the API. Run a
+  command with `--help` to see the fields it can request.
 - `--assignees`/`--auditors`/`--participants` take comma-separated prefixed
   references — `user:N`, `contact:N`, or `group:N`. On `update` the list you
   pass **replaces** the stored one.
