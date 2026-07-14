@@ -17,6 +17,8 @@ import (
 // in a flat cell) but it enriches --json.
 const viewDefaultFields = "id,name,midname,lastname,email,phones,isCompany,position,description"
 
+const viewAvailableFields = "id,template,name,midname,lastname,gender,description,address,site,email,additionalEmailAddresses,skype,telegramId,telegram,facebook,instagram,viberId,position,group,isCompany,isDeleted,birthDate,createdDate,dateOfLastUpdate,supervisors,phones,companies,contacts,files,dataTags,avatarUrl,addedBy,languageCode,communicationLanguageCode,sourceObjectId,sourceDataVersion"
+
 var viewColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -53,6 +55,7 @@ func newViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runView(cmd.Context(), o, args[0])
 		},
 	}
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, viewDefaultFields, viewAvailableFields, "")
 	return cmd
 }
 
