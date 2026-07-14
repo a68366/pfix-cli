@@ -45,6 +45,45 @@ func TestViewPathAndDetail(t *testing.T) {
 			t.Errorf("detail missing %q: %q", want, out.String())
 		}
 	}
+	// A file with no link must not render the LINK row; without this the
+	// LINK column being always-on would go unnoticed.
+	if strings.Contains(out.String(), "LINK") {
+		t.Errorf("LINK row present for a linkless file: %q", out.String())
+	}
+}
+
+func TestViewDetailWithLink(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","file":{"id":5,"name":"doc","size":0,"link":"https://x/doc"}}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &viewOptions{client: fakeClient(srv.URL), out: out}
+	if err := runView(context.Background(), o, "5"); err != nil {
+		t.Fatalf("runView: %v", err)
+	}
+	for _, want := range []string{"LINK", "https://x/doc"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("detail missing %q: %q", want, out.String())
+		}
+	}
+}
+
+func TestViewJSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","file":{"id":5,"name":"doc","size":0}}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &viewOptions{json: true, client: fakeClient(srv.URL), out: out}
+	if err := runView(context.Background(), o, "5"); err != nil {
+		t.Fatalf("runView: %v", err)
+	}
+	if !strings.Contains(out.String(), `"file"`) {
+		t.Errorf("json output missing raw envelope: %q", out.String())
+	}
 }
 
 func TestViewRejectsBadID(t *testing.T) {
