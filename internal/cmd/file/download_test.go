@@ -41,7 +41,7 @@ func TestDownloadByteExactToAutoName(t *testing.T) {
 	if err := os.Chdir(dir); err != nil {
 		t.Fatal(err)
 	}
-	defer os.Chdir(cwd)
+	defer func() { _ = os.Chdir(cwd) }()
 
 	errOut := &strings.Builder{}
 	o := baseDownloadOpts(srv.URL, &strings.Builder{}, errOut)
@@ -148,7 +148,9 @@ func TestDownloadForceOverwrites(t *testing.T) {
 
 	dir := t.TempDir()
 	dest := filepath.Join(dir, "keep.png")
-	os.WriteFile(dest, []byte("original"), 0o644)
+	if err := os.WriteFile(dest, []byte("original"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	o := baseDownloadOpts(srv.URL, &strings.Builder{}, &strings.Builder{})
 	o.output, o.force = dest, true
 	if err := runDownload(context.Background(), o); err != nil {
