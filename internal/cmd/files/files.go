@@ -26,6 +26,7 @@ const listDefaultFields = "id,name,size"
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
+	// SIZE is the API's approximate kilobytes (ceil(bytes/1024)), not exact bytes.
 	{Header: "SIZE", Path: "size"},
 }
 
