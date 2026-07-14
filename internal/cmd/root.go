@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/a68366/pfix-cli/internal/buildinfo"
 	"github.com/a68366/pfix-cli/internal/cmd/api"
 	"github.com/a68366/pfix-cli/internal/cmd/auth"
 	"github.com/a68366/pfix-cli/internal/cmd/config"
@@ -30,6 +31,15 @@ func NewRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+
+	// `pfix --version` is an alias of `pfix version`: cobra prints Version via
+	// the template when the flag is set, and the template emits only the build
+	// summary so both entry points produce byte-identical output. Pre-register
+	// --version (mirroring the subcommand's help text) so cobra's default -v
+	// shorthand is not added — only the long form was requested.
+	root.Version = buildinfo.String()
+	root.SetVersionTemplate("{{.Version}}\n")
+	root.Flags().Bool("version", false, "Print version information")
 
 	pf := root.PersistentFlags()
 	pf.StringVar(&g.Profile, "profile", "", "Configuration profile to use")
