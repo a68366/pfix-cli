@@ -125,7 +125,7 @@ func runAPI(ctx context.Context, o *apiOptions, path string) error {
 		return err
 	}
 	if !o.silent {
-		if err := output.EmitJSON(o.out, data, o.jq); err != nil {
+		if err := emitBody(o.out, resp.Header.Get("Content-Type"), data, o.jq); err != nil {
 			return err
 		}
 	}
@@ -217,4 +217,35 @@ func writeHeaders(w io.Writer, h http.Header) {
 	for _, k := range keys {
 		fmt.Fprintf(w, "%s: %s\n", k, strings.Join(h[k], ", "))
 	}
+}
+
+// emitBody writes an API response body. JSON (incl. Planfix error envelopes)
+// goes through EmitJSON so --json/--jq and pretty-printing work; any other
+// content type — a file download, an HTML error page — is written verbatim so
+// binary stays byte-exact. --jq over a non-JSON body is an explicit error, not
+// a confusing "not valid JSON".
+func emitBody(w io.Writer, contentType string, data []byte, jq string) error {
+	if shouldTreatAsJSON(contentType, data) {
+		return output.EmitJSON(w, data, jq)
+	}
+	if jq != "" {
+		return fmt.Errorf("--jq: response is not JSON (Content-Type %q)", contentType)
+	}
+	_, err := w.Write(data)
+	return err
+}
+
+// shouldTreatAsJSON reports whether a response body should be rendered as JSON.
+// application/json always is. A download carries a concrete binary Content-Type
+// and never qualifies. An empty or text/plain type (a test server, or a plain
+// endpoint) is treated as JSON only when the body actually parses, preserving
+// pretty-print and --jq for those.
+func shouldTreatAsJSON(contentType string, data []byte) bool {
+	if strings.HasPrefix(contentType, "application/json") {
+		return true
+	}
+	if contentType == "" || strings.HasPrefix(contentType, "text/plain") {
+		return json.Valid(data)
+	}
+	return false
 }
