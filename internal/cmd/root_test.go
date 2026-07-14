@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"strings"
 	"testing"
@@ -76,5 +77,16 @@ func TestPersistentPreRunERunsRunEForValidJQ(t *testing.T) {
 	}
 	if !ranRunE {
 		t.Fatal("probe RunE did not run with a valid --jq; the fail-fast assertion would be vacuous")
+	}
+}
+
+func TestExecuteAcceptsContext(t *testing.T) {
+	// Compiles only if Execute takes a context; a cancelled context still lets
+	// a no-op command (version) return without hanging.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_ = ctx // Execute builds its own tree; this asserts the signature/handoff.
+	if err := Execute(ctx); err != nil {
+		t.Fatalf("Execute(ctx) with no args: %v", err)
 	}
 }

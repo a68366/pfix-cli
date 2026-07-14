@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 
 	"github.com/a68366/pfix-cli/internal/cmd/api"
@@ -64,7 +66,8 @@ func NewRootCmd() *cobra.Command {
 	return root
 }
 
-// Execute runs the root command.
-func Execute() error {
-	return NewRootCmd().Execute()
+// Execute runs the root command with ctx as the base context, so a cancelled
+// ctx (e.g. from a Ctrl-C signal) propagates to in-flight requests.
+func Execute(ctx context.Context) error {
+	return NewRootCmd().ExecuteContext(ctx)
 }

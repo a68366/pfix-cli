@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 
 	"github.com/a68366/pfix-cli/internal/cmd"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	if err := cmd.Execute(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, "pfix:", err)
 		os.Exit(1)
 	}
