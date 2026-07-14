@@ -2,6 +2,7 @@
 /dist/
 /bin/
 /pfix
+/.gocache/
 *.exe
 *.test
 

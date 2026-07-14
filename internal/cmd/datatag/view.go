@@ -17,6 +17,8 @@ import (
 // enrichment; it has no flat detail column so it is not listed in viewColumns.
 const viewDefaultFields = "id,name,fields"
 
+const viewAvailableFields = "id,name,group,fields"
+
 var viewColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -47,6 +49,7 @@ func newViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runView(cmd.Context(), o, args[0])
 		},
 	}
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, viewDefaultFields, viewAvailableFields, "")
 	return cmd
 }
 

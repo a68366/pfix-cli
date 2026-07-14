@@ -13,6 +13,8 @@ import (
 
 const listDefaultFields = "id,name,lastname,email,isCompany"
 
+const listAvailableFields = "id,template,name,midname,lastname,gender,description,address,site,email,additionalEmailAddresses,skype,telegramId,telegram,facebook,instagram,viberId,position,group,isCompany,isDeleted,birthDate,createdDate,dateOfLastUpdate,supervisors,phones,companies,contacts,files,sourceObjectId,sourceDataVersion"
+
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -48,6 +50,7 @@ func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runList(cmd.Context(), o)
 		},
 	}
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, listDefaultFields, listAvailableFields, "")
 	cmd.Flags().IntVar(&o.limit, "limit", 100, "Maximum contacts to return")
 	cmd.Flags().IntVar(&o.offset, "offset", 0, "Result offset (for paging)")
 	cmd.Flags().StringVar(&o.filter, "filter", "", "Filter results: a Planfix filters JSON array, e.g. '[{\"type\":51,\"operator\":\"equal\",\"value\":1}]'")

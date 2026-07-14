@@ -17,6 +17,8 @@ import (
 // {users,groups} shape renders poorly in a flat cell) but enriches `--json`.
 const viewDefaultFields = "id,name,description,owner,status,assignees"
 
+const viewAvailableFields = "id,name,description,status,owner,parent,template,group,counterparty,startDate,endDate,hiddenForEmployees,hiddenForClients,overdue,isCloseToDeadline,hasEndDate,assignees,participants,auditors,clientManagers,isDeleted,sourceObjectId,sourceDataVersion"
+
 var viewColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -50,6 +52,7 @@ func newViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runView(cmd.Context(), o, args[0])
 		},
 	}
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, viewDefaultFields, viewAvailableFields, "")
 	return cmd
 }
 
