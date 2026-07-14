@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"bytes"
 	"io"
 	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/a68366/pfix-cli/internal/buildinfo"
 )
 
 func TestNewRootCmdRegistersJQFlag(t *testing.T) {
@@ -76,5 +79,32 @@ func TestPersistentPreRunERunsRunEForValidJQ(t *testing.T) {
 	}
 	if !ranRunE {
 		t.Fatal("probe RunE did not run with a valid --jq; the fail-fast assertion would be vacuous")
+	}
+}
+
+// TestRootVersionFlagAliasesVersionCommand proves `pfix --version` is a true
+// alias of `pfix version`: it emits byte-for-byte identical output (so the two
+// entry points can never drift) and that output carries the build summary.
+func TestRootVersionFlagAliasesVersionCommand(t *testing.T) {
+	run := func(args ...string) string {
+		root := NewRootCmd()
+		buf := &bytes.Buffer{}
+		root.SetOut(buf)
+		root.SetErr(buf)
+		root.SetArgs(args)
+		if err := root.Execute(); err != nil {
+			t.Fatalf("execute %v: %v", args, err)
+		}
+		return buf.String()
+	}
+
+	flagOut := run("--version")
+	cmdOut := run("version")
+
+	if flagOut != cmdOut {
+		t.Fatalf("`--version` output %q != `version` subcommand output %q", flagOut, cmdOut)
+	}
+	if !strings.Contains(flagOut, buildinfo.String()) {
+		t.Fatalf("`--version` output %q does not contain build summary %q", flagOut, buildinfo.String())
 	}
 }

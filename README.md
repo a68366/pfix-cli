@@ -59,6 +59,9 @@ Check connectivity and that the active token is accepted with `pfix ping` — it
 exit code) and exits non-zero if the token is rejected. It is the lightest such check;
 `pfix auth status` uses the same `GET /ping` probe to validate the token.
 
+Print the client version — number, commit, and build date — with `pfix version`
+or the equivalent `pfix --version`.
+
 For CI and automation, skip the config file and pass credentials via the environment:
 
 ```sh
