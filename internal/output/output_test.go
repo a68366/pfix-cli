@@ -103,8 +103,8 @@ func TestJSONInvalidPassthrough(t *testing.T) {
 	if err := JSON(&b, []byte("not json")); err != nil {
 		t.Fatal(err)
 	}
-	if b.String() != "not json\n" {
-		t.Fatalf("got %q", b.String())
+	if b.String() != "not json" {
+		t.Fatalf("non-JSON must be written verbatim, got %q", b.String())
 	}
 }
 

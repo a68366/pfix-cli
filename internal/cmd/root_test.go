@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"strings"
 	"testing"
@@ -106,5 +107,16 @@ func TestRootVersionFlagAliasesVersionCommand(t *testing.T) {
 	}
 	if !strings.Contains(flagOut, buildinfo.String()) {
 		t.Fatalf("`--version` output %q does not contain build summary %q", flagOut, buildinfo.String())
+	}
+}
+
+func TestExecuteAcceptsContext(t *testing.T) {
+	// Compiles only if Execute takes a context; a cancelled context still lets
+	// a no-op command (version) return without hanging.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_ = ctx // Execute builds its own tree; this asserts the signature/handoff.
+	if err := Execute(ctx); err != nil {
+		t.Fatalf("Execute(ctx) with no args: %v", err)
 	}
 }

@@ -54,9 +54,25 @@ func (c *Client) URL(path string) string {
 	return strings.TrimRight(base, "/") + "/" + p
 }
 
-// Do sends an authenticated request, throttling and retrying transient failures.
-// It returns the response for any HTTP status; only transport errors return err.
+// Do sends an authenticated request, throttling and retrying transient
+// failures. It returns the response for any HTTP status; only transport errors
+// return err.
 func (c *Client) Do(ctx context.Context, method, path string, body []byte, headers map[string]string) (*http.Response, error) {
+	return c.do(ctx, method, path, body, headers, c.HTTP)
+}
+
+// Stream sends an authenticated GET and returns the response with its Body
+// unread; the caller must close it. Unlike Do/JSON it runs against a client
+// with no whole-request timeout (only a 30s response-header timeout), so
+// reading a large body is not cut off by a deadline. Redirects to object
+// storage are followed by net/http, which drops the Authorization header on the
+// cross-host hop.
+func (c *Client) Stream(ctx context.Context, path string) (*http.Response, error) {
+	hc := &http.Client{Transport: &http.Transport{ResponseHeaderTimeout: 30 * time.Second}}
+	return c.do(ctx, http.MethodGet, path, nil, nil, hc)
+}
+
+func (c *Client) do(ctx context.Context, method, path string, body []byte, headers map[string]string, hc *http.Client) (*http.Response, error) {
 	if c.Retries <= 0 {
 		return nil, fmt.Errorf("planfix: Retries must be > 0")
 	}
@@ -84,7 +100,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte, heade
 			req.Header.Set(k, v)
 		}
 
-		resp, err := c.HTTP.Do(req)
+		resp, err := hc.Do(req)
 		if err != nil {
 			if attempt < c.Retries {
 				time.Sleep(c.Backoff(attempt))

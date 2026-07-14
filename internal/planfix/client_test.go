@@ -172,3 +172,34 @@ func TestDoDoesNotRetryOn4xx(t *testing.T) {
 		t.Errorf("calls = %d, want 1", got)
 	}
 }
+
+func TestStreamRetriesOn5xxThenSucceeds(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer secret" {
+			t.Errorf("auth = %q", got)
+		}
+		io.WriteString(w, "PNGDATA")
+	}))
+	defer srv.Close()
+
+	resp, err := fastClient(srv.URL).Stream(context.Background(), "file/1/download")
+	if err != nil {
+		t.Fatalf("Stream: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	data, _ := io.ReadAll(resp.Body)
+	if string(data) != "PNGDATA" {
+		t.Fatalf("body = %q, want PNGDATA", data)
+	}
+	if got := atomic.LoadInt32(&calls); got != 2 {
+		t.Fatalf("calls = %d, want 2", got)
+	}
+}

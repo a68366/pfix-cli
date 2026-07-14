@@ -123,8 +123,8 @@ func Detail(w io.Writer, cols []Column, obj map[string]any, extra ...KV) {
 	tw.Flush()
 }
 
-// JSON pretty-prints raw JSON; non-JSON input is written verbatim (with a
-// trailing newline).
+// JSON pretty-prints raw JSON; non-JSON input is written verbatim (no trailing
+// newline is added, so binary passthrough stays byte-exact).
 func JSON(w io.Writer, raw []byte) error {
 	if json.Valid(raw) {
 		var buf bytes.Buffer
@@ -134,14 +134,8 @@ func JSON(w io.Writer, raw []byte) error {
 			return err
 		}
 	}
-	if _, err := w.Write(raw); err != nil {
-		return err
-	}
-	if len(raw) == 0 || raw[len(raw)-1] != '\n' {
-		_, err := io.WriteString(w, "\n")
-		return err
-	}
-	return nil
+	_, err := w.Write(raw)
+	return err
 }
 
 // ColumnsFor returns defCols when fields equals def (the rich, explicit-path

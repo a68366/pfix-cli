@@ -6,7 +6,7 @@ An unofficial command-line client for the [Planfix](https://planfix.com) REST AP
 
 > **Unofficial.** pfix is an independent open-source project. It is **not** an official Planfix product and is not affiliated with, endorsed, sponsored, or funded by Planfix. The Planfix name is used only to describe the API this tool connects to.
 
-> **Status:** functional and actively developed. Typed commands cover tasks, projects, contacts, users, reports, data tags, templates, custom fields, and objects; anything not covered yet is reachable through the raw `api` passthrough (remaining work is on the [roadmap](#roadmap)). Command and flag conventions may still change before v1.0.
+> **Status:** functional and actively developed. Typed commands cover tasks, projects, contacts, users, reports, data tags, templates, custom fields, objects, and files; anything not covered yet is reachable through the raw `api` passthrough (remaining work is on the [roadmap](#roadmap)). Command and flag conventions may still change before v1.0.
 
 ## Install
 
@@ -293,6 +293,28 @@ pfix datatag list           # table of data tags
 pfix datatag view 4         # a tag's definition (--json for its field list)
 ```
 
+### Files
+
+List and download the files on a task, contact, or project, and the editor
+images embedded in a description or comment, which the attachment API never
+returns:
+
+```sh
+pfix task files 17                        # attached files: table of ID / NAME / SIZE
+pfix task files 17 --source inline        # editor-uploaded images, scraped from the HTML
+pfix task files 17 --description-only     # only files attached via the description
+pfix contact files 42 --source inline
+pfix project files 12 --limit 20 --offset 20   # project pages instead of --description-only
+
+pfix file view 6340746                    # one file's metadata (ID / NAME / SIZE / LINK)
+pfix file download 6340746                # writes ./<file-name> (looks up the name first)
+pfix file download 6340746 -o report.pdf  # writes to a chosen path
+pfix file download 6340746 -o -           # streams the bytes to stdout
+```
+
+`file download` refuses to overwrite an existing file unless `--force`, and
+rejects `--json`/`--jq` — it writes raw bytes, not JSON.
+
 ### Raw API passthrough
 
 `pfix api <path>` makes an authenticated request to any Planfix REST endpoint and prints the raw JSON response — handy for endpoints without a dedicated command yet, and for scripting.
@@ -352,7 +374,7 @@ pfix config use staging     # set the active profile (current_profile)
 
 ## Roadmap
 
-- Typed `directory` and `file` commands.
+- A typed `directory` command.
 - Running saved reports (`report` currently covers definitions only).
 
 ## Development

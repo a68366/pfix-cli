@@ -170,3 +170,53 @@ func TestSplitAndMagicValue(t *testing.T) {
 		t.Errorf("magicValue bool = %v", got)
 	}
 }
+
+func TestRunAPIBinaryPassthroughByteExact(t *testing.T) {
+	// A PNG-like body that does NOT end in a newline; must emerge unchanged.
+	raw := []byte{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x00, 0xff}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(raw)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	if err := runAPI(context.Background(), optsFor(srv.URL, nil, out), "file/1/download"); err != nil {
+		t.Fatalf("runAPI: %v", err)
+	}
+	if out.String() != string(raw) {
+		t.Fatalf("binary body altered: got %q want %q", out.String(), string(raw))
+	}
+}
+
+func TestRunAPIBinaryJSONLikeNotPrettyPrinted(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		io.WriteString(w, "123")
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	if err := runAPI(context.Background(), optsFor(srv.URL, nil, out), "file/1/download"); err != nil {
+		t.Fatalf("runAPI: %v", err)
+	}
+	if out.String() != "123" {
+		t.Fatalf("binary JSON-like body must be verbatim, got %q", out.String())
+	}
+}
+
+func TestRunAPIJQOnNonJSONErrors(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		io.WriteString(w, "bytes")
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := optsFor(srv.URL, nil, out)
+	o.jq = ".x"
+	err := runAPI(context.Background(), o, "file/1/download")
+	if err == nil || !strings.Contains(err.Error(), "not JSON") {
+		t.Fatalf("want a non-JSON --jq error, got %v", err)
+	}
+}
