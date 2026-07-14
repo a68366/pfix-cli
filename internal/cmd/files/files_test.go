@@ -149,3 +149,143 @@ func TestSourceValidation(t *testing.T) {
 		t.Fatalf("want limit+inline conflict, got %v", err)
 	}
 }
+
+func TestInlineProjectScrapesDescription(t *testing.T) {
+	var gotPath, gotQuery string
+	fileHits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/project/"):
+			gotPath, gotQuery = r.URL.Path, r.URL.RawQuery
+			io.WriteString(w, `{"result":"success","project":{"description":"<img src=\"?uniqueid=6340764\">"}}`)
+		case strings.HasPrefix(r.URL.Path, "/file/"):
+			fileHits++
+			io.WriteString(w, `{"result":"success","file":{"id":6340764,"name":"editor.png","size":1}}`)
+		default:
+			t.Errorf("unexpected path %q", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := baseOpts(srv.URL, Options{Type: "project", Paging: true}, out, &strings.Builder{})
+	o.source = "inline"
+	if err := runFiles(context.Background(), o); err != nil {
+		t.Fatalf("runFiles: %v", err)
+	}
+	if gotPath != "/project/42" || !strings.Contains(gotQuery, "fields=description") {
+		t.Errorf("project scrape path=%q query=%q", gotPath, gotQuery)
+	}
+	if fileHits != 1 {
+		t.Errorf("file lookups = %d, want 1", fileHits)
+	}
+	if !strings.Contains(out.String(), "editor.png") {
+		t.Errorf("output missing resolved name: %q", out.String())
+	}
+}
+
+func TestInlineContactScrapesCommentsNotDescription(t *testing.T) {
+	var hitComments, hitContactGet bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/contact/42/comments/list":
+			hitComments = true
+			io.WriteString(w, `{"result":"success","comments":[{"description":"<img src=\"?uniqueid=99\">"}]}`)
+		case r.URL.Path == "/contact/42":
+			hitContactGet = true
+			io.WriteString(w, `{"result":"success","contact":{"description":"plain"}}`)
+		case strings.HasPrefix(r.URL.Path, "/file/"):
+			io.WriteString(w, `{"result":"success","file":{"id":99,"name":"c.png","size":2}}`)
+		default:
+			t.Errorf("unexpected path %q", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := baseOpts(srv.URL, Options{Type: "contact", DescriptionOnly: true}, out, &strings.Builder{})
+	o.source = "inline"
+	if err := runFiles(context.Background(), o); err != nil {
+		t.Fatalf("runFiles: %v", err)
+	}
+	if !hitComments {
+		t.Error("contact inline must read the comment feed")
+	}
+	if hitContactGet {
+		t.Error("contact inline must NOT read the plaintext description field")
+	}
+	if !strings.Contains(out.String(), "c.png") {
+		t.Errorf("output missing resolved name: %q", out.String())
+	}
+}
+
+func TestInlineTaskPagesCommentsAndDedupes(t *testing.T) {
+	var offsets []string
+	fileHits := map[string]int{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/task/42/comments/list" {
+			body, _ := io.ReadAll(r.Body)
+			if strings.Contains(string(body), `"offset":0`) {
+				offsets = append(offsets, "0")
+				// 100 comments (a full page) all referencing id 5 → dedupe to one.
+				var sb strings.Builder
+				sb.WriteString(`{"result":"success","comments":[`)
+				for i := 0; i < 100; i++ {
+					if i > 0 {
+						sb.WriteByte(',')
+					}
+					sb.WriteString(`{"description":"<img src=\"?uniqueid=5\">"}`)
+				}
+				sb.WriteString(`]}`)
+				io.WriteString(w, sb.String())
+				return
+			}
+			offsets = append(offsets, "100")
+			io.WriteString(w, `{"result":"success","comments":[{"description":"<img src=\"?uniqueid=6\">"}]}`)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/file/") {
+			fileHits[r.URL.Path]++
+			io.WriteString(w, `{"result":"success","file":{"id":1,"name":"x.png","size":1}}`)
+			return
+		}
+		t.Errorf("unexpected path %q", r.URL.Path)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := baseOpts(srv.URL, Options{Type: "task", DescriptionOnly: true}, out, &strings.Builder{})
+	o.source = "inline"
+	if err := runFiles(context.Background(), o); err != nil {
+		t.Fatalf("runFiles: %v", err)
+	}
+	if len(offsets) != 2 || offsets[0] != "0" || offsets[1] != "100" {
+		t.Errorf("comment offsets = %v, want [0 100]", offsets)
+	}
+	if fileHits["/file/5"] != 1 || fileHits["/file/6"] != 1 {
+		t.Errorf("file lookups = %v, want one each for /file/5 and /file/6", fileHits)
+	}
+}
+
+func TestInlineComposedJSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/project/") {
+			io.WriteString(w, `{"result":"success","project":{"description":"<img src=\"?uniqueid=1\">"}}`)
+			return
+		}
+		io.WriteString(w, `{"result":"success","file":{"id":1,"name":"z.png","size":3}}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := baseOpts(srv.URL, Options{Type: "project", Paging: true}, out, &strings.Builder{})
+	o.source, o.json = "inline", true
+	if err := runFiles(context.Background(), o); err != nil {
+		t.Fatalf("runFiles: %v", err)
+	}
+	for _, want := range []string{`"result"`, `"files"`, `"z.png"`} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("composed json missing %q: %q", want, out.String())
+		}
+	}
+}

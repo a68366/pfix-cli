@@ -7,10 +7,12 @@ package files
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -151,7 +153,101 @@ func renderFiles(o *listOptions, files []map[string]any, emptyNote string) {
 	output.Table(o.out, output.ColumnsFor(fields, listDefaultFields, listColumns), files, !o.quiet)
 }
 
-// runInline is implemented in Task 8; stubbed so attached mode ships first.
 func runInline(ctx context.Context, o *listOptions) error {
-	return fmt.Errorf("--source inline is not implemented yet")
+	client, err := o.client()
+	if err != nil {
+		return err
+	}
+	html, err := gatherInlineHTML(ctx, client, o)
+	if err != nil {
+		return err
+	}
+	ids := cmdutil.ScanFileIDs(html)
+	if len(ids) > 50 && !o.quiet {
+		fmt.Fprintf(o.errOut, "resolving %d inline files…\n", len(ids))
+	}
+	filesList := make([]map[string]any, 0, len(ids))
+	for _, id := range ids {
+		raw, err := client.JSON(ctx, "GET", "file/"+strconv.Itoa(id), nil)
+		if err != nil {
+			return cmdutil.DescribeAPIError(err)
+		}
+		var env struct {
+			File map[string]any `json:"file"`
+		}
+		if err := cmdutil.DecodeJSON(raw, &env); err != nil {
+			return err
+		}
+		if env.File != nil {
+			filesList = append(filesList, env.File)
+		}
+	}
+	if o.json {
+		composed, err := json.Marshal(map[string]any{"result": "success", "files": filesList})
+		if err != nil {
+			return err
+		}
+		return output.EmitJSON(o.out, composed, o.jq)
+	}
+	renderFiles(o, filesList, "no inline files")
+	return nil
+}
+
+// gatherInlineHTML returns the HTML to scan for inline file ids, using the
+// strategy that fits where the resource keeps its HTML (spec §Where the HTML
+// lives): a task's description is comment #1, so its comment feed covers it; a
+// contact's description field is plaintext, so only its comments carry HTML; a
+// project has no comments, so its (HTML) description is read directly.
+func gatherInlineHTML(ctx context.Context, client *planfix.Client, o *listOptions) (string, error) {
+	switch o.Type {
+	case "task", "contact":
+		return gatherCommentHTML(ctx, client, o.Type, o.id)
+	case "project":
+		raw, err := client.JSON(ctx, "GET", "project/"+strconv.Itoa(o.id)+"?fields=description", nil)
+		if err != nil {
+			return "", cmdutil.DescribeAPIError(err)
+		}
+		var env struct {
+			Project struct {
+				Description string `json:"description"`
+			} `json:"project"`
+		}
+		if err := cmdutil.DecodeJSON(raw, &env); err != nil {
+			return "", err
+		}
+		return env.Project.Description, nil
+	default:
+		return "", fmt.Errorf("inline files not supported for %s", o.Type)
+	}
+}
+
+// gatherCommentHTML pages a resource's comment feed and concatenates every
+// comment body. Scanning the concatenation deduplicates ids across pages via
+// ScanFileIDs. Stops on the first short (<100) page.
+func gatherCommentHTML(ctx context.Context, client *planfix.Client, typ string, id int) (string, error) {
+	var b strings.Builder
+	path := typ + "/" + strconv.Itoa(id) + "/comments/list"
+	for offset := 0; ; offset += 100 {
+		body := map[string]any{"offset": offset, "pageSize": 100, "fields": "description"}
+		raw, err := client.JSON(ctx, "POST", path, body)
+		if err != nil {
+			return "", cmdutil.DescribeAPIError(err)
+		}
+		var env struct {
+			Comments []struct {
+				Description string `json:"description"`
+			} `json:"comments"`
+		}
+		if err := cmdutil.DecodeJSON(raw, &env); err != nil {
+			return "", err
+		}
+		for _, c := range env.Comments {
+			b.WriteString(c.Description)
+			b.WriteByte('\n')
+		}
+		if len(env.Comments) < 100 {
+			break
+		}
+	}
+	return b.String(), nil
 }
