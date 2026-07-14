@@ -15,6 +15,8 @@ import (
 
 const viewDefaultFields = "id,name,description,status,priority"
 
+const viewAvailableFields = "id,name,description,priority,status,resultChecking,assigner,parent,project,counterparty,dateTime,startDateTime,endDateTime,hasStartDate,hasEndDate,hasStartTime,hasEndTime,dateOfLastUpdate,duration,durationUnit,durationType,inFavorites,isSummary,isSequential,assignees,participants,auditors,customFieldData,isDeleted,files,sourceObjectId,sourceDataVersion"
+
 var viewColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -48,6 +50,7 @@ func newViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runView(cmd.Context(), o, args[0])
 		},
 	}
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, viewDefaultFields, viewAvailableFields, "")
 	return cmd
 }
 
