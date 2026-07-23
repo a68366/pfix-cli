@@ -174,6 +174,34 @@ func TestDoDoesNotRetryOn4xx(t *testing.T) {
 	}
 }
 
+func TestDoRoutesThroughProxy(t *testing.T) {
+	var proxied int32
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&proxied, 1)
+		io.WriteString(w, `{"ok":true}`)
+	}))
+	defer proxy.Close()
+
+	proxyURL, err := url.Parse(proxy.URL)
+	if err != nil {
+		t.Fatalf("parse proxy URL: %v", err)
+	}
+
+	// Non-routable base: a success proves Do reaches the origin only via the
+	// proxy, i.e. that c.Proxy governs Do (not just Stream).
+	c := fastClient("http://origin.invalid/rest")
+	c.Proxy = func(*http.Request) (*url.URL, error) { return proxyURL, nil }
+
+	resp, err := c.Do(context.Background(), "GET", "task/1", nil, nil)
+	if err != nil {
+		t.Fatalf("Do: %v", err)
+	}
+	resp.Body.Close()
+	if got := atomic.LoadInt32(&proxied); got != 1 {
+		t.Fatalf("proxy calls = %d, want 1", got)
+	}
+}
+
 func TestStreamRoutesThroughProxy(t *testing.T) {
 	var proxied int32
 	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
