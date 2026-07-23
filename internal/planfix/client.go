@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -24,6 +25,10 @@ type Client struct {
 	Retries   int
 	Backoff   func(attempt int) time.Duration
 	UserAgent string // sent as the User-Agent header unless a caller overrides it
+	// Proxy selects the proxy for Stream (file downloads); default
+	// http.ProxyFromEnvironment. Do/JSON go through HTTP, whose default
+	// transport reads the same environment variables independently.
+	Proxy func(*http.Request) (*url.URL, error)
 }
 
 // New returns a Client with sane defaults (~5 req/s, 3 attempts).
@@ -36,6 +41,7 @@ func New(domain, token string) *Client {
 		Retries:   3,
 		Backoff:   defaultBackoff,
 		UserAgent: "pfix/" + buildinfo.Version,
+		Proxy:     http.ProxyFromEnvironment,
 	}
 }
 
@@ -64,11 +70,16 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte, heade
 // Stream sends an authenticated GET and returns the response with its Body
 // unread; the caller must close it. Unlike Do/JSON it runs against a client
 // with no whole-request timeout (only a 30s response-header timeout), so
-// reading a large body is not cut off by a deadline. Redirects to object
-// storage are followed by net/http, which drops the Authorization header on the
-// cross-host hop.
+// reading a large body is not cut off by a deadline. Its transport takes its
+// proxy from c.Proxy (default http.ProxyFromEnvironment), so downloads honor
+// HTTP(S)_PROXY/NO_PROXY like the default client — a bare http.Transport would
+// disable proxying. Redirects to object storage are followed by net/http, which
+// drops the Authorization header on the cross-host hop.
 func (c *Client) Stream(ctx context.Context, path string) (*http.Response, error) {
-	hc := &http.Client{Transport: &http.Transport{ResponseHeaderTimeout: 30 * time.Second}}
+	hc := &http.Client{Transport: &http.Transport{
+		Proxy:                 c.Proxy,
+		ResponseHeaderTimeout: 30 * time.Second,
+	}}
 	return c.do(ctx, http.MethodGet, path, nil, nil, hc)
 }
 

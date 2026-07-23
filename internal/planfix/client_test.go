@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -170,6 +171,39 @@ func TestDoDoesNotRetryOn4xx(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&calls); got != 1 {
 		t.Errorf("calls = %d, want 1", got)
+	}
+}
+
+func TestStreamRoutesThroughProxy(t *testing.T) {
+	var proxied int32
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&proxied, 1)
+		io.WriteString(w, "VIAPROXY")
+	}))
+	defer proxy.Close()
+
+	proxyURL, err := url.Parse(proxy.URL)
+	if err != nil {
+		t.Fatalf("parse proxy URL: %v", err)
+	}
+
+	// A non-routable base: the request can only succeed if it is sent to the
+	// proxy rather than dialed directly, so a passing test proves Stream honors
+	// c.Proxy.
+	c := fastClient("http://origin.invalid/rest")
+	c.Proxy = func(*http.Request) (*url.URL, error) { return proxyURL, nil }
+
+	resp, err := c.Stream(context.Background(), "file/1/download")
+	if err != nil {
+		t.Fatalf("Stream: %v", err)
+	}
+	defer resp.Body.Close()
+	data, _ := io.ReadAll(resp.Body)
+	if string(data) != "VIAPROXY" {
+		t.Fatalf("body = %q, want VIAPROXY", data)
+	}
+	if got := atomic.LoadInt32(&proxied); got != 1 {
+		t.Fatalf("proxy calls = %d, want 1", got)
 	}
 }
 

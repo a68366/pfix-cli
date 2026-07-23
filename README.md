@@ -372,6 +372,10 @@ pfix config show            # active profile's domain + masked token (or: config
 pfix config use staging     # set the active profile (current_profile)
 ```
 
+### Proxy
+
+pfix honors the standard proxy environment variables for every command: `HTTPS_PROXY` / `HTTP_PROXY` and `NO_PROXY` (their lowercase forms work too). The API is served over HTTPS, so `HTTPS_PROXY` is the one that usually matters; list any hosts to reach directly in `NO_PROXY`. `ALL_PROXY` is not consulted (a limitation of the Go standard library).
+
 ## Roadmap
 
 - A typed `directory` command.
