@@ -596,6 +596,94 @@ func TestCommentAddExtras(t *testing.T) {
 	}
 }
 
+// TestCommentAddFlagsFromCommandLine drives the real `comment add` flags
+// through Cobra's parser rather than a hand-rolled changed map, pinning that
+// commentAddExtras's string literals ("pinned", "hidden") match the flag
+// names newCommentAddCmd actually registers. It also confirms that when
+// --silent is omitted, the request carries no query string at all — silent=true
+// must appear only when the user actually passes --silent.
+func TestCommentAddFlagsFromCommandLine(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+		want map[string]any
+	}{
+		{"none", nil, map[string]any{}},
+		{"pinned", []string{"--pinned"}, map[string]any{"isPinned": true}},
+		{"hidden false explicit", []string{"--hidden=false"}, map[string]any{"isHidden": false}},
+		{"both", []string{"--pinned", "--hidden"}, map[string]any{"isPinned": true, "isHidden": true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := &cmdutil.GlobalOpts{}
+			cmd := newCommentAddCmd(g)
+			if err := cmd.Flags().Parse(tc.args); err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			pinned, err := cmd.Flags().GetBool("pinned")
+			if err != nil {
+				t.Fatalf("GetBool(pinned): %v", err)
+			}
+			hidden, err := cmd.Flags().GetBool("hidden")
+			if err != nil {
+				t.Fatalf("GetBool(hidden): %v", err)
+			}
+			got := commentAddExtras(pinned, hidden, cmd.Flags().Changed)
+			if len(got) != len(tc.want) {
+				t.Fatalf("extras = %v, want %v", got, tc.want)
+			}
+			for k, v := range tc.want {
+				if got[k] != v {
+					t.Errorf("extras[%q] = %v, want %v", k, got[k], v)
+				}
+			}
+		})
+	}
+
+	var gotQuery string
+	requestSent := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestSent = true
+		gotQuery = r.URL.RawQuery
+		io.WriteString(w, `{"result":"success","id":1}`)
+	}))
+	defer srv.Close()
+
+	g := &cmdutil.GlobalOpts{}
+	cmd := newCommentAddCmd(g)
+	if err := cmd.Flags().Parse([]string{"--body", "hi"}); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	silent, err := cmd.Flags().GetBool("silent")
+	if err != nil {
+		t.Fatalf("GetBool(silent): %v", err)
+	}
+	if silent {
+		t.Fatal("silent must default to false when --silent is not passed")
+	}
+	pinned, _ := cmd.Flags().GetBool("pinned")
+	hidden, _ := cmd.Flags().GetBool("hidden")
+	body, _ := cmd.Flags().GetString("body")
+	o := &commentAddOptions{
+		id:     12,
+		body:   body,
+		extra:  commentAddExtras(pinned, hidden, cmd.Flags().Changed),
+		silent: silent,
+		client: fakeClient(srv.URL),
+		out:    &strings.Builder{},
+		in:     strings.NewReader(""),
+	}
+	if err := runCommentAdd(context.Background(), o); err != nil {
+		t.Fatalf("runCommentAdd: %v", err)
+	}
+	if !requestSent {
+		t.Fatal("request was never sent")
+	}
+	if gotQuery != "" {
+		t.Errorf("query = %q, want empty (no ?silent= when --silent is omitted)", gotQuery)
+	}
+}
+
 func TestCommentListIncludeDeleted(t *testing.T) {
 	var got map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

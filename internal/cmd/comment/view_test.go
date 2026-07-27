@@ -120,6 +120,26 @@ func TestViewJSON(t *testing.T) {
 	}
 }
 
+// TestViewUnknownIDReturnsAPIMessage pins the cmdutil.DescribeAPIError wiring:
+// an unrecognized comment id (app code 5000) must surface the API's own
+// message, not a generic error.
+func TestViewUnknownIDReturnsAPIMessage(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, `{"result":"fail","code":5000,"error":"Comment not found by id - 999"}`)
+	}))
+	defer srv.Close()
+
+	o := &viewOptions{client: fakeClient(srv.URL), out: &strings.Builder{}}
+	err := runView(context.Background(), o, "999")
+	if err == nil {
+		t.Fatal("want error")
+	}
+	if !strings.Contains(err.Error(), "Comment not found by id - 999") {
+		t.Errorf("API message lost: %v", err)
+	}
+}
+
 func TestViewRejectsBadID(t *testing.T) {
 	o := &viewOptions{client: fakeClient("http://unused"), out: &strings.Builder{}}
 	if err := runView(context.Background(), o, "0"); err == nil {

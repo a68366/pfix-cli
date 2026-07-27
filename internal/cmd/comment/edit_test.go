@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/a68366/pfix-cli/internal/cmdutil"
 )
 
 // editServer answers the parent-resolution GET with parentJSON and records the
@@ -219,6 +221,56 @@ func TestEditBodyOnlyIncludesChangedFlags(t *testing.T) {
 			for k, v := range tc.want {
 				if got[k] != v {
 					t.Errorf("body[%q] = %v, want %v", k, got[k], v)
+				}
+			}
+		})
+	}
+}
+
+// TestEditBodyFromCommandLine drives the real `comment edit` flags through
+// Cobra's parser rather than a hand-rolled changed map, pinning that
+// editBody's string literals ("body", "pinned", "hidden") match the flag
+// names newEditCmd actually registers. A mismatch here would be a silent
+// no-op that, for --body, falls through to a stdin read — which hangs on a
+// terminal.
+func TestEditBodyFromCommandLine(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+		want map[string]any
+	}{
+		{"body only", []string{"--body", "Corrected"}, map[string]any{"description": "Corrected"}},
+		{"pin only", []string{"--pinned"}, map[string]any{"isPinned": true}},
+		{"explicit unpin", []string{"--pinned=false"}, map[string]any{"isPinned": false}},
+		{"body and hidden", []string{"--body", "t", "--hidden"}, map[string]any{"description": "t", "isHidden": true}},
+		{"nothing", nil, map[string]any{}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := &cmdutil.GlobalOpts{}
+			cmd := newEditCmd(g)
+			if err := cmd.Flags().Parse(tc.args); err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			body, err := cmd.Flags().GetString("body")
+			if err != nil {
+				t.Fatalf("GetString(body): %v", err)
+			}
+			pinned, err := cmd.Flags().GetBool("pinned")
+			if err != nil {
+				t.Fatalf("GetBool(pinned): %v", err)
+			}
+			hidden, err := cmd.Flags().GetBool("hidden")
+			if err != nil {
+				t.Fatalf("GetBool(hidden): %v", err)
+			}
+			got := editBody(body, pinned, hidden, cmd.Flags().Changed)
+			if len(got) != len(tc.want) {
+				t.Fatalf("editBody = %v, want %v", got, tc.want)
+			}
+			for k, v := range tc.want {
+				if got[k] != v {
+					t.Errorf("editBody[%q] = %v, want %v", k, got[k], v)
 				}
 			}
 		})
