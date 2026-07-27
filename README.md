@@ -224,6 +224,9 @@ pfix comment delete 11849892 --force
 - Deleting requires `--force` and cannot be undone. The comment stays visible
   under `task comment list --include-deleted`, but can no longer be viewed or
   edited.
+- `--include-deleted` widens the feed beyond soft-deleted comments: it also
+  surfaces Planfix's own system entries (e.g. the record written when a task
+  is renamed) that the default listing hides.
 - A task's first comment carries its description and cannot be deleted. Editing
   it changes the comment only — the task's `description` field keeps its
   original text.

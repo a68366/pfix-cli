@@ -26,9 +26,13 @@ var commentColumns = []output.Column{
 // when --include-deleted is set.
 const commentListDeletedFields = commentListFields + ",isDeleted"
 
-// commentDeletedColumns adds a DELETED column: typeList "Deleted" returns
-// deleted comments *alongside* the live ones — the API has no deleted-only
-// mode — so the extra column marks which is which.
+// commentDeletedColumns adds a DELETED column: typeList "Deleted" widens the
+// feed beyond soft-deleted comments — it also returns the live comments and
+// Planfix system/audit entries (e.g. the record written on a task rename)
+// that the default listing hides. The API has no deleted-only mode, and its
+// type field does not separate the three (an audit entry and the task's
+// description comment both report type "None"), so the extra column only
+// marks which rows are soft-deleted.
 var commentDeletedColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "CREATED", Path: "dateTime.datetime"},
@@ -84,7 +88,7 @@ func newCommentListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&o.limit, "limit", 100, "Maximum comments to return")
 	cmd.Flags().IntVar(&o.offset, "offset", 0, "Result offset (for paging)")
-	cmd.Flags().BoolVar(&o.includeDeleted, "include-deleted", false, "Include soft-deleted comments (adds a DELETED column)")
+	cmd.Flags().BoolVar(&o.includeDeleted, "include-deleted", false, "Include soft-deleted comments and system entries hidden by default (adds a DELETED column)")
 	return cmd
 }
 
