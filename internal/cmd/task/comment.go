@@ -22,6 +22,17 @@ var commentColumns = []output.Column{
 	{Header: "COMMENT", Path: "description"},
 }
 
+// typeList "Deleted" returns deleted comments *alongside* the live ones — the
+// API has no deleted-only mode — so the extra column marks which is which.
+const commentListDeletedFields = commentListFields + ",isDeleted"
+
+var commentDeletedColumns = []output.Column{
+	{Header: "ID", Path: "id"},
+	{Header: "CREATED", Path: "dateTime.datetime"},
+	{Header: "DELETED", Path: "isDeleted"},
+	{Header: "COMMENT", Path: "description"},
+}
+
 // newCommentCmd returns the `comment` sub-group with `list` and `add` subcommands.
 func newCommentCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	cmd := &cobra.Command{
@@ -35,15 +46,16 @@ func newCommentCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 // --- comment list ---
 
 type commentListOptions struct {
-	id     int
-	limit  int
-	offset int
-	fields string
-	json   bool
-	quiet  bool
-	jq     string
-	client func() (*planfix.Client, error)
-	out    io.Writer
+	id             int
+	limit          int
+	offset         int
+	fields         string
+	includeDeleted bool
+	json           bool
+	quiet          bool
+	jq             string
+	client         func() (*planfix.Client, error)
+	out            io.Writer
 }
 
 func newCommentListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
@@ -69,15 +81,23 @@ func newCommentListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&o.limit, "limit", 100, "Maximum comments to return")
 	cmd.Flags().IntVar(&o.offset, "offset", 0, "Result offset (for paging)")
+	cmd.Flags().BoolVar(&o.includeDeleted, "include-deleted", false, "Include soft-deleted comments (adds a DELETED column)")
 	return cmd
 }
 
 func runCommentList(ctx context.Context, o *commentListOptions) error {
-	fields := cmdutil.FieldsCSV(o.fields, commentListFields)
+	def, cols := commentListFields, commentColumns
+	if o.includeDeleted {
+		def, cols = commentListDeletedFields, commentDeletedColumns
+	}
+	fields := cmdutil.FieldsCSV(o.fields, def)
 	body := map[string]any{
 		"offset":   o.offset,
 		"pageSize": o.limit,
 		"fields":   fields,
+	}
+	if o.includeDeleted {
+		body["typeList"] = "Deleted"
 	}
 	client, err := o.client()
 	if err != nil {
@@ -104,7 +124,7 @@ func runCommentList(ctx context.Context, o *commentListOptions) error {
 			c["description"] = output.Truncate(d, 80)
 		}
 	}
-	output.Table(o.out, output.ColumnsFor(fields, commentListFields, commentColumns), env.Comments, !o.quiet)
+	output.Table(o.out, output.ColumnsFor(fields, def, cols), env.Comments, !o.quiet)
 	return nil
 }
 

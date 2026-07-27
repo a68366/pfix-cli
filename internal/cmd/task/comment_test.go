@@ -491,3 +491,68 @@ func TestCommentAddNonNumericID(t *testing.T) {
 		t.Errorf("error should mention 'number', got: %q", err.Error())
 	}
 }
+
+func TestCommentListDefaultBodyHasNoTypeList(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Errorf("unmarshal %q: %v", raw, err)
+		}
+		io.WriteString(w, `{"result":"success","comments":[{"id":1,"description":"a"}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &commentListOptions{id: 12, limit: 100, client: fakeClient(srv.URL), out: out}
+	if err := runCommentList(context.Background(), o); err != nil {
+		t.Fatalf("runCommentList: %v", err)
+	}
+	if _, ok := got["typeList"]; ok {
+		t.Errorf("typeList must be absent by default: %v", got)
+	}
+	if got["fields"] != commentListFields {
+		t.Errorf("fields = %v, want %q", got["fields"], commentListFields)
+	}
+	if strings.Contains(out.String(), "DELETED") {
+		t.Errorf("DELETED column present by default:\n%s", out.String())
+	}
+}
+
+func TestCommentListIncludeDeleted(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Errorf("unmarshal %q: %v", raw, err)
+		}
+		io.WriteString(w, `{"result":"success","comments":[
+			{"id":2,"description":"gone","isDeleted":true},
+			{"id":1,"description":"live","isDeleted":false}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &commentListOptions{id: 12, limit: 100, includeDeleted: true, client: fakeClient(srv.URL), out: out}
+	if err := runCommentList(context.Background(), o); err != nil {
+		t.Fatalf("runCommentList: %v", err)
+	}
+	if got["typeList"] != "Deleted" {
+		t.Errorf("typeList = %v, want Deleted", got["typeList"])
+	}
+	fields, _ := got["fields"].(string)
+	if !strings.Contains(fields, "isDeleted") {
+		t.Errorf("fields = %q, want isDeleted included", fields)
+	}
+	for _, want := range []string{"DELETED", "true", "gone", "live"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("table missing %q:\n%s", want, out.String())
+		}
+	}
+}
