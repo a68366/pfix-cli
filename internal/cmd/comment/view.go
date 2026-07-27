@@ -17,7 +17,8 @@ import (
 // column, but they enrich `--json`/`--fields` output.
 const viewDefaultFields = "id,dateTime,description,owner,task,contact,isPinned,isHidden,type,fromType"
 
-const viewAvailableFields = "id,dateTime,type,fromType,description,additionalDescriptionData,task,project,contact,owner,isDeleted,isPinned,isHidden,isNotRead,recipients,reminders,dataTags,files,changeTaskStartDate,changeTaskExpectDate,changeStatus,sourceObjectId,sourceDataVersion"
+// viewAvailableFields is the shared comment vocabulary — see AvailableFields.
+const viewAvailableFields = AvailableFields
 
 // viewColumns are the detail rows for one comment. TASK and CONTACT are
 // mutually exclusive in practice — a comment hangs off one or the other — so

@@ -14,6 +14,12 @@ import (
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 )
 
+// AvailableFields is the comment field vocabulary, shared by every command
+// that reads comments: this group's `view` and the task-scoped
+// `pfix task comment list`. Both read the same object, so both offer the same
+// --fields names.
+const AvailableFields = "id,dateTime,type,fromType,description,additionalDescriptionData,task,project,contact,owner,isDeleted,isPinned,isHidden,isNotRead,recipients,reminders,dataTags,files,changeTaskStartDate,changeTaskExpectDate,changeStatus,sourceObjectId,sourceDataVersion"
+
 // NewCmd builds the `comment` command group.
 func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	cmd := &cobra.Command{

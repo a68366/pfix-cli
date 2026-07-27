@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/a68366/pfix-cli/internal/cmd/comment"
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 	"github.com/a68366/pfix-cli/internal/output"
 	"github.com/a68366/pfix-cli/internal/planfix"
@@ -89,6 +90,8 @@ func newCommentListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	cmd.Flags().IntVar(&o.limit, "limit", 100, "Maximum comments to return")
 	cmd.Flags().IntVar(&o.offset, "offset", 0, "Result offset (for paging)")
 	cmd.Flags().BoolVar(&o.includeDeleted, "include-deleted", false, "Include soft-deleted comments and system entries hidden by default (adds a DELETED column)")
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, commentListFields, comment.AvailableFields, "") +
+		"\n\n--include-deleted appends isDeleted to the default fields."
 	return cmd
 }
 
