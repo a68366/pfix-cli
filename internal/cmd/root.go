@@ -8,6 +8,7 @@ import (
 	"github.com/a68366/pfix-cli/internal/buildinfo"
 	"github.com/a68366/pfix-cli/internal/cmd/api"
 	"github.com/a68366/pfix-cli/internal/cmd/auth"
+	"github.com/a68366/pfix-cli/internal/cmd/comment"
 	"github.com/a68366/pfix-cli/internal/cmd/config"
 	"github.com/a68366/pfix-cli/internal/cmd/contact"
 	"github.com/a68366/pfix-cli/internal/cmd/customfield"
@@ -64,6 +65,7 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(auth.NewCmd(g))
 	root.AddCommand(api.NewCmd(g))
 	root.AddCommand(config.NewCmd(g))
+	root.AddCommand(comment.NewCmd(g))
 	root.AddCommand(task.NewCmd(g))
 	root.AddCommand(project.NewCmd(g))
 	root.AddCommand(contact.NewCmd(g))

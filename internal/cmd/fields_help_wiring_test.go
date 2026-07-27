@@ -39,6 +39,7 @@ func TestFieldsHelpWiring(t *testing.T) {
 	}{
 		{[]string{"task", "list"}, "Available fields (42):", true},
 		{[]string{"task", "view"}, "Available fields (45):", true},
+		{[]string{"comment", "view"}, "Available fields (23):", false},
 		{[]string{"project", "list"}, "Available fields (23):", false},
 		{[]string{"project", "view"}, "Available fields (23):", false},
 		{[]string{"contact", "list"}, "Available fields (31):", false},
