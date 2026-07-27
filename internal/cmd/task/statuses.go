@@ -15,6 +15,8 @@ import (
 
 const statusesDefaultFields = "id,name,isActive"
 
+const statusesAvailableFields = "id,name,color,isActive,hasDeadline,isAppliedIndividually,texts"
+
 var statusesColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -56,6 +58,7 @@ func newStatusesCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		},
 	}
 	cmd.Flags().IntVar(&o.process, "process", 0, "Process ID (instead of a task id)")
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, statusesDefaultFields, statusesAvailableFields, "")
 	return cmd
 }
 

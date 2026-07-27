@@ -23,6 +23,8 @@ import (
 
 const listDefaultFields = "id,name,size"
 
+const listAvailableFields = "id,name,size,link"
+
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -58,15 +60,15 @@ type listOptions struct {
 // NewCmd builds the `files` subcommand for a parent resource.
 func NewCmd(g *cmdutil.GlobalOpts, opts Options) *cobra.Command {
 	o := &listOptions{Options: opts}
+	longDesc := "List files on a " + opts.Type + ".\n\n" +
+		"--source attached (default) lists attachment records. --source inline lists\n" +
+		"editor images embedded in the description/comments, which the attachment API\n" +
+		"never returns. --fields selects table columns only; the file endpoints do not\n" +
+		"support server-side field selection."
 	cmd := &cobra.Command{
 		Use:   "files <id>",
 		Short: "List files on a " + opts.Type,
-		Long: "List files on a " + opts.Type + ".\n\n" +
-			"--source attached (default) lists attachment records. --source inline lists\n" +
-			"editor images embedded in the description/comments, which the attachment API\n" +
-			"never returns. --fields selects table columns only; the file endpoints do not\n" +
-			"support server-side field selection.",
-		Args: cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := cmdutil.ValidateID(args[0])
 			if err != nil {
@@ -90,6 +92,7 @@ func NewCmd(g *cmdutil.GlobalOpts, opts Options) *cobra.Command {
 		f.IntVar(&o.limit, "limit", 100, "Maximum files to return")
 		f.IntVar(&o.offset, "offset", 0, "Result offset (for paging)")
 	}
+	cmd.Long = cmdutil.FieldsHelp(longDesc, listDefaultFields, listAvailableFields, "")
 	return cmd
 }
 

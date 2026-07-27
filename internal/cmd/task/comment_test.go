@@ -491,3 +491,230 @@ func TestCommentAddNonNumericID(t *testing.T) {
 		t.Errorf("error should mention 'number', got: %q", err.Error())
 	}
 }
+
+func TestCommentListDefaultBodyHasNoTypeList(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Errorf("unmarshal %q: %v", raw, err)
+		}
+		io.WriteString(w, `{"result":"success","comments":[{"id":1,"description":"a"}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &commentListOptions{id: 12, limit: 100, client: fakeClient(srv.URL), out: out}
+	if err := runCommentList(context.Background(), o); err != nil {
+		t.Fatalf("runCommentList: %v", err)
+	}
+	if _, ok := got["typeList"]; ok {
+		t.Errorf("typeList must be absent by default: %v", got)
+	}
+	if got["fields"] != commentListFields {
+		t.Errorf("fields = %v, want %q", got["fields"], commentListFields)
+	}
+	if strings.Contains(out.String(), "DELETED") {
+		t.Errorf("DELETED column present by default:\n%s", out.String())
+	}
+}
+
+func TestCommentAddSendsOnlySetFlags(t *testing.T) {
+	var got map[string]any
+	var gotQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.RawQuery
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Errorf("unmarshal %q: %v", raw, err)
+		}
+		io.WriteString(w, `{"result":"success","id":77}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &commentAddOptions{
+		id:     12,
+		body:   "hello",
+		extra:  map[string]any{"isPinned": true},
+		silent: true,
+		client: fakeClient(srv.URL),
+		out:    out,
+		in:     strings.NewReader(""),
+	}
+	if err := runCommentAdd(context.Background(), o); err != nil {
+		t.Fatalf("runCommentAdd: %v", err)
+	}
+	if got["description"] != "hello" {
+		t.Errorf("description = %v", got["description"])
+	}
+	if got["isPinned"] != true {
+		t.Errorf("isPinned = %v, want true", got["isPinned"])
+	}
+	if _, ok := got["isHidden"]; ok {
+		t.Errorf("isHidden must be absent when unset: %v", got)
+	}
+	if gotQuery != "silent=true" {
+		t.Errorf("query = %q", gotQuery)
+	}
+	if !strings.Contains(out.String(), "77") {
+		t.Errorf("output = %q", out.String())
+	}
+}
+
+func TestCommentAddExtras(t *testing.T) {
+	cases := []struct {
+		name    string
+		pinned  bool
+		hidden  bool
+		changed map[string]bool
+		want    map[string]any
+	}{
+		{"none", false, false, map[string]bool{}, map[string]any{}},
+		{"pinned", true, false, map[string]bool{"pinned": true}, map[string]any{"isPinned": true}},
+		{"hidden false explicit", false, false, map[string]bool{"hidden": true}, map[string]any{"isHidden": false}},
+		{"both", true, true, map[string]bool{"pinned": true, "hidden": true}, map[string]any{"isPinned": true, "isHidden": true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := commentAddExtras(tc.pinned, tc.hidden, func(f string) bool { return tc.changed[f] })
+			if len(got) != len(tc.want) {
+				t.Fatalf("extras = %v, want %v", got, tc.want)
+			}
+			for k, v := range tc.want {
+				if got[k] != v {
+					t.Errorf("extras[%q] = %v, want %v", k, got[k], v)
+				}
+			}
+		})
+	}
+}
+
+// TestCommentAddFlagsFromCommandLine drives the real `comment add` flags
+// through Cobra's parser rather than a hand-rolled changed map, pinning that
+// commentAddExtras's string literals ("pinned", "hidden") match the flag
+// names newCommentAddCmd actually registers. It also confirms that when
+// --silent is omitted, the request carries no query string at all — silent=true
+// must appear only when the user actually passes --silent.
+func TestCommentAddFlagsFromCommandLine(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+		want map[string]any
+	}{
+		{"none", nil, map[string]any{}},
+		{"pinned", []string{"--pinned"}, map[string]any{"isPinned": true}},
+		{"hidden false explicit", []string{"--hidden=false"}, map[string]any{"isHidden": false}},
+		{"both", []string{"--pinned", "--hidden"}, map[string]any{"isPinned": true, "isHidden": true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := &cmdutil.GlobalOpts{}
+			cmd := newCommentAddCmd(g)
+			if err := cmd.Flags().Parse(tc.args); err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			pinned, err := cmd.Flags().GetBool("pinned")
+			if err != nil {
+				t.Fatalf("GetBool(pinned): %v", err)
+			}
+			hidden, err := cmd.Flags().GetBool("hidden")
+			if err != nil {
+				t.Fatalf("GetBool(hidden): %v", err)
+			}
+			got := commentAddExtras(pinned, hidden, cmd.Flags().Changed)
+			if len(got) != len(tc.want) {
+				t.Fatalf("extras = %v, want %v", got, tc.want)
+			}
+			for k, v := range tc.want {
+				if got[k] != v {
+					t.Errorf("extras[%q] = %v, want %v", k, got[k], v)
+				}
+			}
+		})
+	}
+
+	var gotQuery string
+	requestSent := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestSent = true
+		gotQuery = r.URL.RawQuery
+		io.WriteString(w, `{"result":"success","id":1}`)
+	}))
+	defer srv.Close()
+
+	g := &cmdutil.GlobalOpts{}
+	cmd := newCommentAddCmd(g)
+	if err := cmd.Flags().Parse([]string{"--body", "hi"}); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	silent, err := cmd.Flags().GetBool("silent")
+	if err != nil {
+		t.Fatalf("GetBool(silent): %v", err)
+	}
+	if silent {
+		t.Fatal("silent must default to false when --silent is not passed")
+	}
+	pinned, _ := cmd.Flags().GetBool("pinned")
+	hidden, _ := cmd.Flags().GetBool("hidden")
+	body, _ := cmd.Flags().GetString("body")
+	o := &commentAddOptions{
+		id:     12,
+		body:   body,
+		extra:  commentAddExtras(pinned, hidden, cmd.Flags().Changed),
+		silent: silent,
+		client: fakeClient(srv.URL),
+		out:    &strings.Builder{},
+		in:     strings.NewReader(""),
+	}
+	if err := runCommentAdd(context.Background(), o); err != nil {
+		t.Fatalf("runCommentAdd: %v", err)
+	}
+	if !requestSent {
+		t.Fatal("request was never sent")
+	}
+	if gotQuery != "" {
+		t.Errorf("query = %q, want empty (no ?silent= when --silent is omitted)", gotQuery)
+	}
+}
+
+func TestCommentListIncludeDeleted(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Errorf("unmarshal %q: %v", raw, err)
+		}
+		io.WriteString(w, `{"result":"success","comments":[
+			{"id":2,"description":"gone","isDeleted":true},
+			{"id":1,"description":"live","isDeleted":false}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &commentListOptions{id: 12, limit: 100, includeDeleted: true, client: fakeClient(srv.URL), out: out}
+	if err := runCommentList(context.Background(), o); err != nil {
+		t.Fatalf("runCommentList: %v", err)
+	}
+	if got["typeList"] != "Deleted" {
+		t.Errorf("typeList = %v, want Deleted", got["typeList"])
+	}
+	fields, _ := got["fields"].(string)
+	if !strings.Contains(fields, "isDeleted") {
+		t.Errorf("fields = %q, want isDeleted included", fields)
+	}
+	for _, want := range []string{"DELETED", "true", "gone", "live"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("table missing %q:\n%s", want, out.String())
+		}
+	}
+}

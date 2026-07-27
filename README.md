@@ -6,7 +6,7 @@ An unofficial command-line client for the [Planfix](https://planfix.com) REST AP
 
 > **Unofficial.** pfix is an independent open-source project. It is **not** an official Planfix product and is not affiliated with, endorsed, sponsored, or funded by Planfix. The Planfix name is used only to describe the API this tool connects to.
 
-> **Status:** functional and actively developed. Typed commands cover tasks, projects, contacts, users, reports, data tags, templates, custom fields, objects, and files; anything not covered yet is reachable through the raw `api` passthrough (remaining work is on the [roadmap](#roadmap)). Command and flag conventions may still change before v1.0.
+> **Status:** functional and actively developed. Typed commands cover tasks, projects, contacts, users, reports, data tags, templates, custom fields, objects, files, and comments; anything not covered yet is reachable through the raw `api` passthrough (remaining work is on the [roadmap](#roadmap)). Command and flag conventions may still change before v1.0.
 
 ## Install
 
@@ -81,7 +81,7 @@ typed command:
 | `--json` | Emit the raw Planfix API response (pretty-printed) instead of a table — the machine-readable path |
 | `--jq '<expr>'` | Filter the JSON output through a jq expression, one result per line (implies `--json`) |
 | `--fields a,b,c` | Override which Planfix fields are requested and shown as columns (defaults are per-command) |
-| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`/`comment add`) |
+| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`/`comment add`/`comment edit`/`comment delete`) |
 
 **Reshaping JSON with `--jq`.** `--jq` runs a jq expression over the same JSON
 `--json` would print, so you don't need to pass both. A result that is a bare
@@ -165,9 +165,12 @@ pfix task update 57 --cf "88210=Waiting for reply"
 # Read custom fields back — request the numeric ids via --fields
 pfix task view 57 --fields id,name,88206
 
-# Comments
+# Comments — list/add are task-scoped; view/edit/delete live in their own
+# 'comment' group (see the Comments section below) and take a comment's own id
 pfix task comment list 17
+pfix task comment list 17 --include-deleted   # show soft-deleted comments too (adds a DELETED column)
 pfix task comment add 17 --body "Looks good"
+pfix task comment add 17 --body "Looks good" --pinned --silent
 echo "comment from stdin" | pfix task comment add 17
 ```
 
@@ -203,6 +206,33 @@ Notes:
   template/process, or the API accepts the write and silently stores nothing.
   To read a custom field back on `task view`, request its numeric id via
   `--fields`; it renders as an extra `name = value` row below the table.
+
+### Comments
+
+Planfix comments are global objects, not children of the task or contact they
+hang off. `view`, `edit`, and `delete` take the comment's own id (as printed
+by `task comment list`); listing and adding stay on the parent object — see
+`task comment list`/`add` above.
+
+```sh
+pfix comment view 11849892
+pfix comment edit 11849892 --body "Corrected"
+pfix comment edit 11849892 --pinned=false
+pfix comment delete 11849892 --force
+```
+
+- Deleting requires `--force` and cannot be undone. The comment stays visible
+  under `task comment list --include-deleted`, but can no longer be viewed or
+  edited.
+- `--include-deleted` widens the feed beyond soft-deleted comments: it also
+  surfaces Planfix's own system entries (e.g. the record written when a task
+  is renamed) that the default listing hides.
+- A task's first comment carries its description and cannot be deleted. Editing
+  it changes the comment only — the task's `description` field keeps its
+  original text.
+- `--fields` overrides the column set. Combining it with `--include-deleted`
+  on `task comment list` drops the DELETED column, so deleted and live rows
+  then look identical.
 
 ### Projects
 
