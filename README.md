@@ -6,7 +6,7 @@ An unofficial command-line client for the [Planfix](https://planfix.com) REST AP
 
 > **Unofficial.** pfix is an independent open-source project. It is **not** an official Planfix product and is not affiliated with, endorsed, sponsored, or funded by Planfix. The Planfix name is used only to describe the API this tool connects to.
 
-> **Status:** functional and actively developed. Typed commands cover tasks, projects, contacts, users, reports, data tags, templates, custom fields, objects, and files; anything not covered yet is reachable through the raw `api` passthrough (remaining work is on the [roadmap](#roadmap)). Command and flag conventions may still change before v1.0.
+> **Status:** functional and actively developed. Typed commands cover tasks, projects, contacts, users, reports, data tags, templates, custom fields, objects, files, and comments; anything not covered yet is reachable through the raw `api` passthrough (remaining work is on the [roadmap](#roadmap)). Command and flag conventions may still change before v1.0.
 
 ## Install
 
@@ -170,6 +170,26 @@ pfix task comment list 17
 pfix task comment add 17 --body "Looks good"
 echo "comment from stdin" | pfix task comment add 17
 ```
+
+Comments are global objects: `list` and `add` hang off a task, while `view`,
+`edit`, and `delete` take the comment's own id (as printed by `comment list`).
+
+```bash
+pfix task comment list 17 --include-deleted
+pfix task comment add 17 --body "Looks good" --pinned --silent
+
+pfix comment view 11849892
+pfix comment edit 11849892 --body "Corrected"
+pfix comment edit 11849892 --pinned=false
+pfix comment delete 11849892 --force
+```
+
+- Deleting requires `--force` and cannot be undone. The comment stays visible
+  under `task comment list --include-deleted`, but can no longer be viewed or
+  edited.
+- A task's first comment carries its description and cannot be deleted. Editing
+  it changes the comment only — the task's `description` field keeps its
+  original text.
 
 Notes:
 - A task's **description** is its first comment in Planfix — it shows up in
