@@ -16,8 +16,11 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Short: "Work with Planfix contacts",
 	}
 	cg := groups.NewCmd(g, "contact")
-	cg.Short = "List contact groups (categories)"
-	cg.Long = groups.Long("List contact groups — the contact categories such as Клиент, Партнёр, Поставщик.")
+	cg.Short = "List contact groups"
+	cg.Long = groups.Long("List contact groups — the segments a contact base is divided into,\n" +
+		"such as customers, partners or suppliers. These are not the group:N\n" +
+		"references accepted by --assignees/--auditors/--participants; those are\n" +
+		"user groups (see 'pfix user groups').")
 	cmd.AddCommand(newListCmd(g), newViewCmd(g), newCreateCmd(g), newUpdateCmd(g), processes.NewCmd(g, "contact"), cg, files.NewCmd(g, files.Options{Type: "contact", DescriptionOnly: true}))
 	return cmd
 }

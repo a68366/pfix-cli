@@ -256,7 +256,7 @@ Planfix UI.
 pfix contact list                                   # table; --limit / --offset page
 pfix contact view 42                                # detail block (--json for everything)
 pfix contact processes                              # list contact processes (ID / NAME)
-pfix contact groups                                 # contact groups / categories (ID / NAME)
+pfix contact groups                                 # contact groups — how the base is segmented (ID / NAME)
 pfix contact create --name "Ada" --lastname "Lovelace" --template 1 --email ada@example.com
 pfix contact update 42 --email new@example.com --lastname "Byron"
 ```

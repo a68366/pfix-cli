@@ -57,7 +57,7 @@ func NewCmd(g *cmdutil.GlobalOpts, objectType string) *cobra.Command {
 
 // Long renders this command's help text for a caller-supplied description,
 // preserving the shared Default/Available fields block. Callers that override
-// NewCmd's generic Short (contact's "categories" note, user's group:N note)
+// NewCmd's generic Short (contact's segmentation note, user's group:N note)
 // call this to rebuild Long instead of replacing it outright.
 func Long(short string) string {
 	return cmdutil.FieldsHelp(short, listDefaultFields, listAvailableFields, "")
