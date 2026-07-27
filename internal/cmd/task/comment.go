@@ -133,6 +133,8 @@ func runCommentList(ctx context.Context, o *commentListOptions) error {
 type commentAddOptions struct {
 	id     int
 	body   string
+	extra  map[string]any
+	silent bool
 	json   bool
 	quiet  bool
 	jq     string
@@ -143,6 +145,7 @@ type commentAddOptions struct {
 
 func newCommentAddCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	o := &commentAddOptions{}
+	var pinned, hidden bool
 	cmd := &cobra.Command{
 		Use:   "add <id>",
 		Short: "Add a comment to a task",
@@ -159,11 +162,29 @@ func newCommentAddCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			o.in = cmd.InOrStdin()
+			o.extra = commentAddExtras(pinned, hidden, cmd.Flags().Changed)
 			return runCommentAdd(cmd.Context(), o)
 		},
 	}
 	cmd.Flags().StringVar(&o.body, "body", "", "Comment body (or pipe via stdin)")
+	cmd.Flags().BoolVar(&pinned, "pinned", false, "Pin the new comment")
+	cmd.Flags().BoolVar(&hidden, "hidden", false, "Hide the new comment")
+	cmd.Flags().BoolVar(&o.silent, "silent", false, "Do not notify the comment's recipients")
 	return cmd
+}
+
+// commentAddExtras returns the optional comment properties the user set. Only
+// explicitly-passed flags are sent, so an unmentioned property keeps whatever
+// default the API applies.
+func commentAddExtras(pinned, hidden bool, changed func(string) bool) map[string]any {
+	extra := map[string]any{}
+	if changed("pinned") {
+		extra["isPinned"] = pinned
+	}
+	if changed("hidden") {
+		extra["isHidden"] = hidden
+	}
+	return extra
 }
 
 func runCommentAdd(ctx context.Context, o *commentAddOptions) error {
@@ -183,8 +204,15 @@ func runCommentAdd(ctx context.Context, o *commentAddOptions) error {
 	if err != nil {
 		return err
 	}
+	payload := map[string]any{"description": body}
+	for k, v := range o.extra {
+		payload[k] = v
+	}
 	path := "task/" + strconv.Itoa(o.id) + "/comments/"
-	raw, err := client.JSON(ctx, "POST", path, map[string]any{"description": body})
+	if o.silent {
+		path += "?silent=true"
+	}
+	raw, err := client.JSON(ctx, "POST", path, payload)
 	if err != nil {
 		return err
 	}

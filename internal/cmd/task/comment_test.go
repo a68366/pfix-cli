@@ -522,6 +522,80 @@ func TestCommentListDefaultBodyHasNoTypeList(t *testing.T) {
 	}
 }
 
+func TestCommentAddSendsOnlySetFlags(t *testing.T) {
+	var got map[string]any
+	var gotQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.RawQuery
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Errorf("unmarshal %q: %v", raw, err)
+		}
+		io.WriteString(w, `{"result":"success","id":77}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &commentAddOptions{
+		id:     12,
+		body:   "hello",
+		extra:  map[string]any{"isPinned": true},
+		silent: true,
+		client: fakeClient(srv.URL),
+		out:    out,
+		in:     strings.NewReader(""),
+	}
+	if err := runCommentAdd(context.Background(), o); err != nil {
+		t.Fatalf("runCommentAdd: %v", err)
+	}
+	if got["description"] != "hello" {
+		t.Errorf("description = %v", got["description"])
+	}
+	if got["isPinned"] != true {
+		t.Errorf("isPinned = %v, want true", got["isPinned"])
+	}
+	if _, ok := got["isHidden"]; ok {
+		t.Errorf("isHidden must be absent when unset: %v", got)
+	}
+	if gotQuery != "silent=true" {
+		t.Errorf("query = %q", gotQuery)
+	}
+	if !strings.Contains(out.String(), "77") {
+		t.Errorf("output = %q", out.String())
+	}
+}
+
+func TestCommentAddExtras(t *testing.T) {
+	cases := []struct {
+		name    string
+		pinned  bool
+		hidden  bool
+		changed map[string]bool
+		want    map[string]any
+	}{
+		{"none", false, false, map[string]bool{}, map[string]any{}},
+		{"pinned", true, false, map[string]bool{"pinned": true}, map[string]any{"isPinned": true}},
+		{"hidden false explicit", false, false, map[string]bool{"hidden": true}, map[string]any{"isHidden": false}},
+		{"both", true, true, map[string]bool{"pinned": true, "hidden": true}, map[string]any{"isPinned": true, "isHidden": true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := commentAddExtras(tc.pinned, tc.hidden, func(f string) bool { return tc.changed[f] })
+			if len(got) != len(tc.want) {
+				t.Fatalf("extras = %v, want %v", got, tc.want)
+			}
+			for k, v := range tc.want {
+				if got[k] != v {
+					t.Errorf("extras[%q] = %v, want %v", k, got[k], v)
+				}
+			}
+		})
+	}
+}
+
 func TestCommentListIncludeDeleted(t *testing.T) {
 	var got map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
