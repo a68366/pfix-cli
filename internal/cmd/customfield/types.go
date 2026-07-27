@@ -68,6 +68,8 @@ func typeName(v any) string {
 
 const typesDefaultFields = "id,name"
 
+const typesAvailableFields = "id,name"
+
 var typesColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -96,6 +98,7 @@ func newTypesCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runTypes(cmd.Context(), o)
 		},
 	}
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, typesDefaultFields, typesAvailableFields, "")
 	return cmd
 }
 

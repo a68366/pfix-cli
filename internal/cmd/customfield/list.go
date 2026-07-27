@@ -14,6 +14,8 @@ import (
 
 const listDefaultFields = "id,name,type"
 
+const listAvailableFields = "id,name,names,type,objectType,groupId,directoryId,directoryFields,enumValues,mainValue"
+
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -45,6 +47,7 @@ func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runList(cmd.Context(), o)
 		},
 	}
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, listDefaultFields, listAvailableFields, "")
 	return cmd
 }
 

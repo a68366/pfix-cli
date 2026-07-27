@@ -15,7 +15,7 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	}
 	ug := groups.NewCmd(g, "user")
 	ug.Short = "List user (employee) groups"
-	ug.Long = "List user (employee) groups — the group:N values accepted by --assignees/--auditors/--participants."
+	ug.Long = groups.Long("List user (employee) groups — the group:N values accepted by --assignees/--auditors/--participants.")
 	cmd.AddCommand(newListCmd(g), newViewCmd(g), ug, newPositionsCmd(g))
 	return cmd
 }

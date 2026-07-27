@@ -17,9 +17,6 @@ import (
 // column, but they enrich `--json`/`--fields` output.
 const viewDefaultFields = "id,dateTime,description,owner,task,contact,isPinned,isHidden,type,fromType"
 
-// viewAvailableFields is the shared comment vocabulary — see AvailableFields.
-const viewAvailableFields = AvailableFields
-
 // viewColumns are the detail rows for one comment. TASK and CONTACT are
 // mutually exclusive in practice — a comment hangs off one or the other — so
 // parentColumns drops whichever the response does not carry.
@@ -55,7 +52,7 @@ func newViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runView(cmd.Context(), o, args[0])
 		},
 	}
-	cmd.Long = cmdutil.FieldsHelp(cmd.Short, viewDefaultFields, viewAvailableFields, "")
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, viewDefaultFields, AvailableFields, "")
 	return cmd
 }
 

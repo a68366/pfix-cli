@@ -17,6 +17,8 @@ import (
 
 const listDefaultFields = "id,name"
 
+const listAvailableFields = "id,name"
+
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -49,7 +51,16 @@ func NewCmd(g *cmdutil.GlobalOpts, objectType string) *cobra.Command {
 			return runList(cmd.Context(), o)
 		},
 	}
+	cmd.Long = Long(cmd.Short)
 	return cmd
+}
+
+// Long renders this command's help text for a caller-supplied description,
+// preserving the shared Default/Available fields block. Callers that override
+// NewCmd's generic Short (contact's "categories" note, user's group:N note)
+// call this to rebuild Long instead of replacing it outright.
+func Long(short string) string {
+	return cmdutil.FieldsHelp(short, listDefaultFields, listAvailableFields, "")
 }
 
 func runList(ctx context.Context, o *listOptions) error {

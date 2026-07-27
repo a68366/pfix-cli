@@ -17,7 +17,7 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	}
 	cg := groups.NewCmd(g, "contact")
 	cg.Short = "List contact groups (categories)"
-	cg.Long = "List contact groups — the contact categories such as Клиент, Партнёр, Поставщик."
+	cg.Long = groups.Long("List contact groups — the contact categories such as Клиент, Партнёр, Поставщик.")
 	cmd.AddCommand(newListCmd(g), newViewCmd(g), newCreateCmd(g), newUpdateCmd(g), processes.NewCmd(g, "contact"), cg, files.NewCmd(g, files.Options{Type: "contact", DescriptionOnly: true}))
 	return cmd
 }

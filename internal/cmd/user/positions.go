@@ -14,6 +14,8 @@ import (
 
 const positionsDefaultFields = "id,name"
 
+const positionsAvailableFields = "id,name"
+
 var positionsColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "NAME", Path: "name"},
@@ -42,6 +44,7 @@ func newPositionsCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runPositions(cmd.Context(), o)
 		},
 	}
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, positionsDefaultFields, positionsAvailableFields, "")
 	return cmd
 }
 

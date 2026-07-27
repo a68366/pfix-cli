@@ -44,6 +44,11 @@ func newListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			return runList(cmd.Context(), o)
 		},
 	}
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, listDefaultFields, "", "") +
+		"\n\nThe selectable fields depend on the object type being listed — a template\n" +
+		"carries the same field vocabulary as that type's own records. See\n" +
+		"'pfix task view --help', 'pfix contact view --help', and\n" +
+		"'pfix project view --help' for the type-specific list."
 	return cmd
 }
 
