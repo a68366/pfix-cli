@@ -34,7 +34,7 @@ func TestFieldsHelpWiring(t *testing.T) {
 	root := NewRootCmd()
 	cases := []struct {
 		path      []string
-		wantCount string // e.g. "Available fields (42):"
+		wantCount string // e.g. "Available fields (42):"; empty skips the block check (see below)
 		wantCF    bool   // custom-field note present
 	}{
 		{[]string{"task", "list"}, "Available fields (42):", true},
@@ -53,6 +53,21 @@ func TestFieldsHelpWiring(t *testing.T) {
 		{[]string{"datatag", "view"}, "Available fields (4):", false},
 		{[]string{"object", "list"}, "Available fields (32):", false},
 		{[]string{"object", "view"}, "Available fields (32):", false},
+		{[]string{"customfield", "list"}, "Available fields (10):", false},
+		{[]string{"customfield", "types"}, "Available fields (2):", false},
+		{[]string{"user", "groups"}, "Available fields (2):", false},
+		{[]string{"contact", "groups"}, "Available fields (2):", false},
+		{[]string{"user", "positions"}, "Available fields (2):", false},
+		{[]string{"task", "processes"}, "Available fields (2):", false},
+		{[]string{"contact", "processes"}, "Available fields (2):", false},
+		{[]string{"task", "statuses"}, "Available fields (7):", false},
+		{[]string{"task", "files"}, "Available fields (4):", false},
+		{[]string{"contact", "files"}, "Available fields (4):", false},
+		{[]string{"project", "files"}, "Available fields (4):", false},
+		// template list has no fixed vocabulary — the selectable fields depend on
+		// the object type being listed — so it carries no "Available fields"
+		// block, only the Default fields line.
+		{[]string{"template", "list"}, "", false},
 	}
 	for _, tc := range cases {
 		t.Run(strings.Join(tc.path, "/"), func(t *testing.T) {
@@ -61,7 +76,7 @@ func TestFieldsHelpWiring(t *testing.T) {
 			if !strings.Contains(long, "Default fields: ") {
 				t.Errorf("%v Long missing Default fields line:\n%s", tc.path, long)
 			}
-			if !strings.Contains(long, tc.wantCount) {
+			if tc.wantCount != "" && !strings.Contains(long, tc.wantCount) {
 				t.Errorf("%v Long missing %q:\n%s", tc.path, tc.wantCount, long)
 			}
 			hasCF := strings.Contains(long, "pfix customfield list task")
