@@ -13,6 +13,8 @@ import (
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
+// viewDefaultFields requests type and fromType too: neither has a detail
+// column, but they enrich `--json`/`--fields` output.
 const viewDefaultFields = "id,dateTime,description,owner,task,contact,isPinned,isHidden,type,fromType"
 
 const viewAvailableFields = "id,dateTime,type,fromType,description,additionalDescriptionData,task,project,contact,owner,isDeleted,isPinned,isHidden,isNotRead,recipients,reminders,dataTags,files,changeTaskStartDate,changeTaskExpectDate,changeStatus,sourceObjectId,sourceDataVersion"

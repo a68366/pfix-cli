@@ -19,6 +19,12 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "comment",
 		Short: "Work with Planfix comments",
+		Long: "Work with Planfix comments.\n\n" +
+			"A comment is a global object, not a child of the task or contact it hangs\n" +
+			"off: view/edit/delete here take the comment's own id (as printed by\n" +
+			"'pfix task comment list'). Listing and adding are done through the parent\n" +
+			"object instead — see 'pfix task comment list <task-id>' and\n" +
+			"'pfix task comment add <task-id>'.",
 	}
 	cmd.AddCommand(newViewCmd(g), newEditCmd(g), newDeleteCmd(g))
 	return cmd

@@ -22,10 +22,13 @@ var commentColumns = []output.Column{
 	{Header: "COMMENT", Path: "description"},
 }
 
-// typeList "Deleted" returns deleted comments *alongside* the live ones — the
-// API has no deleted-only mode — so the extra column marks which is which.
+// commentListDeletedFields adds isDeleted to the default field set, requested
+// when --include-deleted is set.
 const commentListDeletedFields = commentListFields + ",isDeleted"
 
+// commentDeletedColumns adds a DELETED column: typeList "Deleted" returns
+// deleted comments *alongside* the live ones — the API has no deleted-only
+// mode — so the extra column marks which is which.
 var commentDeletedColumns = []output.Column{
 	{Header: "ID", Path: "id"},
 	{Header: "CREATED", Path: "dateTime.datetime"},
