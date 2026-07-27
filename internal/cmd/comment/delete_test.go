@@ -110,6 +110,27 @@ func TestDeleteUnknownIDKeepsAPIMessage(t *testing.T) {
 	}
 }
 
+// A body that is not valid JSON (an HTML proxy error page, an empty or
+// truncated response) parses to a zero Code *and* an empty Message. That must
+// not be misread as the description-comment case, which the reviewer flagged
+// as actively misleading on a destructive command.
+func TestDeleteNonJSONBodyNoDescriptionHint(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "<html><body>Bad Gateway</body></html>")
+	}))
+	defer srv.Close()
+
+	o := &deleteOptions{force: true, client: fakeClient(srv.URL), out: &strings.Builder{}}
+	err := runDelete(context.Background(), o, "11849932")
+	if err == nil {
+		t.Fatal("want error")
+	}
+	if strings.Contains(err.Error(), "description") {
+		t.Errorf("description hint wrongly applied to an unparseable body: %v", err)
+	}
+}
+
 func TestDeleteJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, `{"result":"success"}`)

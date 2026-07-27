@@ -77,10 +77,14 @@ func runDelete(ctx context.Context, o *deleteOptions, idStr string) error {
 // describeDeleteError names the one known cause of the API's otherwise opaque
 // "Rest API error" (app code 0) on this endpoint: a task's first comment holds
 // the task description and is undeletable. Every other error, including the
-// code 5000 not-found, falls through to the shared auth-hint mapping.
+// code 5000 not-found, falls through to the shared auth-hint mapping. The
+// Message check matters: planfix.ParseError returns a zero Code *and* an empty
+// Message for any body it cannot parse as JSON (an HTML proxy page, an empty
+// or truncated body), and those must not be misdiagnosed as the description
+// case — only a genuine "Rest API error" response carries a non-empty Message.
 func describeDeleteError(err error) error {
 	var apiErr *planfix.APIError
-	if errors.As(err, &apiErr) && apiErr.Code == 0 && apiErr.StatusCode == http.StatusBadRequest {
+	if errors.As(err, &apiErr) && apiErr.Code == 0 && apiErr.Message != "" && apiErr.StatusCode == http.StatusBadRequest {
 		return fmt.Errorf("%w — a task's first comment holds its description and cannot be deleted", err)
 	}
 	return cmdutil.DescribeAPIError(err)
