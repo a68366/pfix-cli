@@ -20,6 +20,6 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Use:   "comment",
 		Short: "Work with Planfix comments",
 	}
-	cmd.AddCommand(newViewCmd(g), newDeleteCmd(g))
+	cmd.AddCommand(newViewCmd(g), newEditCmd(g), newDeleteCmd(g))
 	return cmd
 }
