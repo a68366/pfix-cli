@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -276,3 +277,284 @@ func TestRunChecklistListEmptyQuietNoNote(t *testing.T) {
 		t.Errorf("quiet stderr = %q, want no note", errOut.String())
 	}
 }
+
+// --- checklist body assembly tests ---
+
+func TestChecklistBody(t *testing.T) {
+	cases := []struct {
+		name      string
+		itemName  string
+		done      bool
+		assignees []string
+		set       []string
+		want      string
+		wantErr   bool
+	}{
+		{name: "name only", itemName: "amocrm", set: []string{"name"}, want: `{"name":"amocrm"}`},
+		{name: "done true", done: true, set: []string{"done"}, want: `{"isDone":true}`},
+		{name: "done false is still sent", done: false, set: []string{"done"}, want: `{"isDone":false}`},
+		{name: "unset flags are omitted", itemName: "x", done: true, want: `{}`},
+		{
+			name:      "assignees",
+			assignees: []string{"user:5", "group:7"},
+			set:       []string{"assignees"},
+			want:      `{"assignees":{"groups":[{"id":7}],"users":[{"id":"user:5"}]}}`,
+		},
+		{name: "bad assignee ref", assignees: []string{"user5"}, set: []string{"assignees"}, wantErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			changed := func(f string) bool {
+				for _, s := range tc.set {
+					if s == f {
+						return true
+					}
+				}
+				return false
+			}
+			got, err := checklistBody(tc.itemName, tc.done, tc.assignees, changed)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("checklistBody(%v) = %v, want error", tc.assignees, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("checklistBody: %v", err)
+			}
+			b, err := json.Marshal(got)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			if string(b) != tc.want {
+				t.Errorf("body = %s, want %s", b, tc.want)
+			}
+		})
+	}
+}
+
+// --- checklist add tests ---
+
+func TestRunChecklistAdd(t *testing.T) {
+	var gotMethod, gotPath, gotBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		b, _ := io.ReadAll(r.Body)
+		gotBody = string(b)
+		io.WriteString(w, `{"result":"success","id":29151}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &checklistAddOptions{
+		taskID: 29141,
+		body:   map[string]any{"name": "new item", "isDone": true},
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	if err := runChecklistAdd(context.Background(), o); err != nil {
+		t.Fatalf("runChecklistAdd: %v", err)
+	}
+	if gotMethod != "POST" {
+		t.Errorf("method = %q, want POST", gotMethod)
+	}
+	if gotPath != "/task/29141/checklist" {
+		t.Errorf("path = %q, want /task/29141/checklist", gotPath)
+	}
+	if !strings.Contains(gotBody, `"name":"new item"`) || !strings.Contains(gotBody, `"isDone":true`) {
+		t.Errorf("body = %q, want name and isDone", gotBody)
+	}
+	if !strings.Contains(out.String(), "29151") {
+		t.Errorf("output = %q, want the new item id", out.String())
+	}
+}
+
+func TestRunChecklistAddQuiet(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","id":29151}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &checklistAddOptions{
+		taskID: 1,
+		body:   map[string]any{"name": "x"},
+		quiet:  true,
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	if err := runChecklistAdd(context.Background(), o); err != nil {
+		t.Fatalf("runChecklistAdd: %v", err)
+	}
+	if out.String() != "29151\n" {
+		t.Errorf("quiet output = %q, want just the id", out.String())
+	}
+}
+
+// The create response has no documented schema. When it carries no id, say so
+// plainly rather than reporting a fabricated 0.
+func TestRunChecklistAddWithoutID(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success"}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &checklistAddOptions{
+		taskID: 7,
+		body:   map[string]any{"name": "x"},
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	if err := runChecklistAdd(context.Background(), o); err != nil {
+		t.Fatalf("runChecklistAdd: %v", err)
+	}
+	got := out.String()
+	if strings.Contains(got, "0") {
+		t.Errorf("output = %q, should not print a zero id", got)
+	}
+	if !strings.Contains(got, "task 7") {
+		t.Errorf("output = %q, want the task named", got)
+	}
+
+	quiet := &strings.Builder{}
+	o.out, o.quiet = quiet, true
+	if err := runChecklistAdd(context.Background(), o); err != nil {
+		t.Fatalf("runChecklistAdd: %v", err)
+	}
+	if quiet.String() != "" {
+		t.Errorf("quiet output = %q, want nothing when the API returns no id", quiet.String())
+	}
+}
+
+func TestRunChecklistAddJSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","id":8}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &checklistAddOptions{
+		taskID: 1,
+		body:   map[string]any{"name": "x"},
+		json:   true,
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	if err := runChecklistAdd(context.Background(), o); err != nil {
+		t.Fatalf("runChecklistAdd: %v", err)
+	}
+	if !strings.Contains(out.String(), `"result": "success"`) {
+		t.Errorf("json output = %q, want the raw response", out.String())
+	}
+}
+
+// --- checklist update tests ---
+
+func TestRunChecklistUpdate(t *testing.T) {
+	var gotMethod, gotPath, gotBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		b, _ := io.ReadAll(r.Body)
+		gotBody = string(b)
+		io.WriteString(w, `{"result":"success"}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &checklistUpdateOptions{
+		taskID: 29141,
+		itemID: 29149,
+		body:   map[string]any{"isDone": false},
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	if err := runChecklistUpdate(context.Background(), o); err != nil {
+		t.Fatalf("runChecklistUpdate: %v", err)
+	}
+	if gotMethod != "POST" {
+		t.Errorf("method = %q, want POST", gotMethod)
+	}
+	if gotPath != "/task/29141/checklist/29149" {
+		t.Errorf("path = %q, want /task/29141/checklist/29149", gotPath)
+	}
+	if gotBody != `{"isDone":false}` {
+		t.Errorf("body = %q, want only the flag that was set", gotBody)
+	}
+	if !strings.Contains(out.String(), "29149") {
+		t.Errorf("output = %q, want the item id", out.String())
+	}
+}
+
+func TestRunChecklistUpdateNothingToChange(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("no request should be made when nothing was set")
+	}))
+	defer srv.Close()
+
+	o := &checklistUpdateOptions{
+		taskID: 1,
+		itemID: 2,
+		body:   map[string]any{},
+		client: fakeClient(srv.URL),
+		out:    &strings.Builder{},
+	}
+	err := runChecklistUpdate(context.Background(), o)
+	if err == nil || !strings.Contains(err.Error(), "nothing to change") {
+		t.Fatalf("err = %v, want a nothing-to-change error", err)
+	}
+}
+
+// The update endpoint reports per-field rejections in a failures array while
+// still answering 200, so a non-empty failures list must not read as success.
+func TestRunChecklistUpdateFailures(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","failures":[{"field":"assignees","error":"user not found"}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &checklistUpdateOptions{
+		taskID: 1,
+		itemID: 2,
+		body:   map[string]any{"assignees": map[string]any{}},
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	err := runChecklistUpdate(context.Background(), o)
+	if err == nil {
+		t.Fatalf("err = nil, want the failures reported as an error")
+	}
+	for _, want := range []string{"assignees", "user not found"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("err = %v, want it to mention %q", err, want)
+		}
+	}
+	if out.String() != "" {
+		t.Errorf("output = %q, want no success line", out.String())
+	}
+}
+
+func TestRunChecklistUpdateQuiet(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success"}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &checklistUpdateOptions{
+		taskID: 1,
+		itemID: 2,
+		body:   map[string]any{"name": "x"},
+		quiet:  true,
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	if err := runChecklistUpdate(context.Background(), o); err != nil {
+		t.Fatalf("runChecklistUpdate: %v", err)
+	}
+	if out.String() != "2\n" {
+		t.Errorf("quiet output = %q, want just the item id", out.String())
+	}
+}
+

@@ -48,7 +48,7 @@ func newChecklistCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 			"Items can be listed, viewed, added and updated. The API exposes no\n" +
 			"delete, so an item added by mistake can only be renamed, not removed.",
 	}
-	cmd.AddCommand(newChecklistListCmd(g), newChecklistViewCmd(g))
+	cmd.AddCommand(newChecklistListCmd(g), newChecklistViewCmd(g), newChecklistAddCmd(g), newChecklistUpdateCmd(g))
 	return cmd
 }
 
