@@ -301,6 +301,9 @@ func TestChecklistBody(t *testing.T) {
 			want:      `{"assignees":{"groups":[{"id":7}],"users":[{"id":"user:5"}]}}`,
 		},
 		{name: "bad assignee ref", assignees: []string{"user5"}, set: []string{"assignees"}, wantErr: true},
+		// --assignees="" parses as a zero-length slice, and the list is replaced
+		// wholesale, so accepting it would silently clear the item's people.
+		{name: "empty assignees list", assignees: []string{}, set: []string{"assignees"}, wantErr: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -529,6 +532,56 @@ func TestRunChecklistUpdateFailures(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("err = %v, want it to mention %q", err, want)
 		}
+	}
+	if out.String() != "" {
+		t.Errorf("output = %q, want no success line", out.String())
+	}
+}
+
+// Under --json the response still passes through unmodified, and the failure
+// then sets the exit code — output and error, not one or the other.
+func TestRunChecklistUpdateFailuresJSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","failures":[{"field":"name","error":"too long"}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &checklistUpdateOptions{
+		taskID: 1,
+		itemID: 2,
+		body:   map[string]any{"name": "x"},
+		json:   true,
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	err := runChecklistUpdate(context.Background(), o)
+	if err == nil || !strings.Contains(err.Error(), "too long") {
+		t.Fatalf("err = %v, want the failure reported", err)
+	}
+	if !strings.Contains(out.String(), `"failures"`) {
+		t.Errorf("json output = %q, want the raw response passed through", out.String())
+	}
+}
+
+// The create response is undocumented, so the same failures contract is applied
+// to add: a rejected create must not print as a success.
+func TestRunChecklistAddFailures(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","failures":[{"field":"assignees","error":"user not found"}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &checklistAddOptions{
+		taskID: 1,
+		body:   map[string]any{"name": "x"},
+		client: fakeClient(srv.URL),
+		out:    out,
+	}
+	err := runChecklistAdd(context.Background(), o)
+	if err == nil || !strings.Contains(err.Error(), "user not found") {
+		t.Fatalf("err = %v, want the failure reported", err)
 	}
 	if out.String() != "" {
 		t.Errorf("output = %q, want no success line", out.String())

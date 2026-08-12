@@ -28,6 +28,13 @@ func checklistBody(name string, done bool, assignees []string, changed func(stri
 		b["isDone"] = done
 	}
 	if changed("assignees") {
+		// An empty --assignees="" parses as a zero-length slice rather than a
+		// flag error, and the list is replaced wholesale, so accepting it would
+		// silently clear the item's people — refuse it as taskFields.apply does
+		// for the task-level people flags.
+		if len(assignees) == 0 {
+			return nil, fmt.Errorf("--assignees requires at least one reference")
+		}
 		people, err := cmdutil.ParsePeople(assignees)
 		if err != nil {
 			return nil, err
