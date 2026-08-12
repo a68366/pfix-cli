@@ -81,7 +81,7 @@ typed command:
 | `--json` | Emit the raw Planfix API response (pretty-printed) instead of a table — the machine-readable path |
 | `--jq '<expr>'` | Filter the JSON output through a jq expression, one result per line (implies `--json`) |
 | `--fields a,b,c` | Override which Planfix fields are requested and shown as columns (defaults are per-command) |
-| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`/`comment add`/`comment edit`/`comment delete`) |
+| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`, `comment add`/`edit`/`delete`, `checklist add`/`update`) |
 
 **Reshaping JSON with `--jq`.** `--jq` runs a jq expression over the same JSON
 `--json` would print, so you don't need to pass both. A result that is a bare
@@ -206,6 +206,35 @@ Notes:
   template/process, or the API accepts the write and silently stores nothing.
   To read a custom field back on `task view`, request its numeric id via
   `--fields`; it renders as an extra `name = value` row below the table.
+
+### Checklists
+
+A task can carry a checklist. Its items live under `task checklist`, and only
+tasks have them — contacts and projects do not.
+
+```sh
+pfix task checklist list 17                       # ID / DONE / NAME
+pfix task checklist list 17 --json
+pfix task checklist view 17 29149                 # one item, by task id + item id
+
+pfix task checklist add 17 --name "Ship the release notes"
+pfix task checklist add 17 --name "Draft" --done --assignees user:5
+
+pfix task checklist update 17 29149 --done        # tick it off
+pfix task checklist update 17 29149 --done=false  # untick it
+pfix task checklist update 17 29149 --name "Ship the notes" --assignees user:5,group:7
+```
+
+- There is **no delete**: the API exposes none, so an item can be renamed or
+  ticked off, but never removed.
+- `update` sends only the flags you pass, so ticking an item leaves its text
+  and assignees untouched. `--assignees` **replaces** the stored list.
+- `view` and `update` take both ids. The API resolves an item by its own id and
+  does not check it against the task id — a wrong task id still finds the item —
+  so take the pair from `checklist list`.
+- The endpoint reports a rejected field in the response instead of failing the
+  request; pfix turns that into an error, so a refused update never prints as a
+  success.
 
 ### Comments
 
