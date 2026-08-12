@@ -557,4 +557,3 @@ func TestRunChecklistUpdateQuiet(t *testing.T) {
 		t.Errorf("quiet output = %q, want just the item id", out.String())
 	}
 }
-
