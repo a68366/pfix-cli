@@ -14,6 +14,6 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Use:   "task",
 		Short: "Work with Planfix tasks",
 	}
-	cmd.AddCommand(newListCmd(g), newViewCmd(g), newCreateCmd(g), newUpdateCmd(g), newCommentCmd(g), newFiltersCmd(g), newStatusesCmd(g), processes.NewCmd(g, "task"), files.NewCmd(g, files.Options{Type: "task", DescriptionOnly: true}))
+	cmd.AddCommand(newListCmd(g), newViewCmd(g), newCreateCmd(g), newUpdateCmd(g), newCommentCmd(g), newChecklistCmd(g), newFiltersCmd(g), newStatusesCmd(g), processes.NewCmd(g, "task"), files.NewCmd(g, files.Options{Type: "task", DescriptionOnly: true}))
 	return cmd
 }
