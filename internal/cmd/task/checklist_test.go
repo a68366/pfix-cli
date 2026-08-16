@@ -285,15 +285,18 @@ func TestChecklistBody(t *testing.T) {
 		name      string
 		itemName  string
 		done      bool
+		parent    int
 		assignees []string
 		set       []string
 		want      string
 		wantErr   bool
 	}{
+		{name: "parent nests the item", parent: 13, set: []string{"parent"}, want: `{"parent":{"id":13}}`},
+		{name: "parent must be positive", parent: 0, set: []string{"parent"}, wantErr: true},
 		{name: "name only", itemName: "amocrm", set: []string{"name"}, want: `{"name":"amocrm"}`},
 		{name: "done true", done: true, set: []string{"done"}, want: `{"isDone":true}`},
 		{name: "done false is still sent", done: false, set: []string{"done"}, want: `{"isDone":false}`},
-		{name: "unset flags are omitted", itemName: "x", done: true, want: `{}`},
+		{name: "unset flags are omitted", itemName: "x", done: true, parent: 9, want: `{}`},
 		{
 			name:      "assignees",
 			assignees: []string{"user:5", "group:7"},
@@ -315,7 +318,8 @@ func TestChecklistBody(t *testing.T) {
 				}
 				return false
 			}
-			got, err := checklistBody(tc.itemName, tc.done, tc.assignees, changed)
+			f := &checklistFlags{name: tc.itemName, done: tc.done, parent: tc.parent, assignees: tc.assignees}
+			got, err := f.body(changed)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("checklistBody(%v) = %v, want error", tc.assignees, got)

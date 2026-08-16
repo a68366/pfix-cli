@@ -214,27 +214,34 @@ tasks have them — contacts and projects do not.
 
 ```sh
 pfix task checklist list 17                       # ID / DONE / NAME
-pfix task checklist list 17 --json
+pfix task checklist list 17 --fields id,name,parent
 pfix task checklist view 17 29149                 # one item, by task id + item id
 
 pfix task checklist add 17 --name "Ship the release notes"
 pfix task checklist add 17 --name "Draft" --done --assignees user:5
+pfix task checklist add 17 --name "Sub-step" --parent 29149   # nest it
 
 pfix task checklist update 17 29149 --done        # tick it off
 pfix task checklist update 17 29149 --done=false  # untick it
 pfix task checklist update 17 29149 --name "Ship the notes" --assignees user:5,group:7
+pfix task checklist update 17 29150 --parent 29149            # move it under another item
 ```
 
-- There is **no delete**: the API exposes none, so an item can be renamed or
-  ticked off, but never removed.
+- There is **no delete**: the API exposes none, so an item can be renamed,
+  ticked off or moved, but never removed.
 - `update` sends only the flags you pass, so ticking an item leaves its text
   and assignees untouched. `--assignees` **replaces** the stored list.
-- `view` and `update` take both ids. The API resolves an item by its own id and
-  does not check it against the task id — a wrong task id still finds the item —
-  so take the pair from `checklist list`.
-- The endpoint reports a rejected field in the response instead of failing the
-  request; pfix turns that into an error, so a refused update never prints as a
-  success.
+- Items nest. `--parent` takes another item of the same task, and the listing is
+  flat but depth-first — each nested item follows its parent — so request
+  `--fields parent` to see the structure. A top-level item's parent is the task.
+- `view` and `update` take both ids, and the API treats them differently: a read
+  resolves the item by its own id and ignores the task id, while a write checks
+  the pair and answers `400` if the item belongs elsewhere. Take both ids from
+  `checklist list`.
+- **An assignee reference the API cannot resolve is dropped silently.** Since
+  the list is replaced wholesale, a typo like `--assignees user:999999` clears
+  the item's assignees and still reports success — nothing in the response
+  distinguishes it from a real change.
 
 ### Comments
 

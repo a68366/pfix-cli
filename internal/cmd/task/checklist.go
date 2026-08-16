@@ -52,11 +52,13 @@ func newChecklistCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	return cmd
 }
 
-// checklistItemPath is the route for one item. The API resolves an item by its
-// own id and does not check it against the task segment — an item answers
-// through any task id, including one that does not exist — so pfix forwards the
-// task id the user gave rather than deriving one, and never treats the segment
-// as proof of ownership.
+// checklistItemPath is the route for one item, shared by the GET and the
+// update POST. The two disagree about the task segment: a read resolves the
+// item by its own id and ignores the segment entirely (any task id works, even
+// one that does not exist), while a write validates it and answers 400 —
+// "Checklist item does not belong to task" or "Task not found by id". pfix
+// forwards the task id the user gave either way, so a write is checked by the
+// API and a read simply is not.
 func checklistItemPath(taskID, itemID int) string {
 	return "task/" + strconv.Itoa(taskID) + "/checklist/" + strconv.Itoa(itemID)
 }
@@ -97,7 +99,11 @@ func newChecklistListCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&o.limit, "limit", 100, "Maximum items to return (API maximum: 100)")
 	cmd.Flags().IntVar(&o.offset, "offset", 0, "Result offset (for paging)")
-	cmd.Long = cmdutil.FieldsHelp(cmd.Short, checklistListFields, checklistAvailableFields, "")
+	cmd.Long = cmdutil.FieldsHelp(cmd.Short, checklistListFields, checklistAvailableFields, "") +
+		"\n\nItems come back depth-first, each nested item following its parent.\n" +
+		"The listing is flat, so request --fields parent to see the structure:\n" +
+		"an item's parent is the task for a top-level item, another item for a\n" +
+		"nested one."
 	return cmd
 }
 
@@ -168,9 +174,10 @@ func newChecklistViewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		},
 	}
 	cmd.Long = cmdutil.FieldsHelp(cmd.Short, checklistViewFields, checklistAvailableFields, "") +
-		"\n\nThe API resolves an item by its own id: the task id is required by the\n" +
-		"route but is not checked against the item, so a wrong one still returns\n" +
-		"the item. Take the pair from 'pfix task checklist list <task-id>'."
+		"\n\nA read resolves the item by its own id: the task id is required by the\n" +
+		"route but is not checked against it, so a wrong one still returns the\n" +
+		"item. Writes do check the pair. Take both ids from\n" +
+		"'pfix task checklist list <task-id>'."
 	return cmd
 }
 
