@@ -6,7 +6,7 @@ An unofficial command-line client for the [Planfix](https://planfix.com) REST AP
 
 > **Unofficial.** pfix is an independent open-source project. It is **not** an official Planfix product and is not affiliated with, endorsed, sponsored, or funded by Planfix. The Planfix name is used only to describe the API this tool connects to.
 
-> **Status:** functional and actively developed. Typed commands cover tasks, projects, contacts, users, reports, data tags, templates, custom fields, objects, files, and comments; anything not covered yet is reachable through the raw `api` passthrough (remaining work is on the [roadmap](#roadmap)). Command and flag conventions may still change before v1.0.
+> **Status:** functional and actively developed. Typed commands cover tasks (including checklists), projects, contacts, users, reports, data tags, templates, custom fields, objects, files (including uploads), and comments; anything not covered yet is reachable through the raw `api` passthrough (remaining work is on the [roadmap](#roadmap)). Command and flag conventions may still change before v1.0.
 
 ## Install
 
@@ -471,7 +471,7 @@ go test ./...        # run the test suite
 go vet ./...         # static analysis
 gofmt -l .           # formatting check (prints nothing when clean)
 go build -o pfix .   # build the binary
-golangci-lint run    # lint (optional locally; CI runs it)
+golangci-lint run    # lint — required, CI gates on it
 ```
 
 See [`AGENTS.md`](AGENTS.md) for architecture and conventions.
