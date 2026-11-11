@@ -45,17 +45,18 @@ func newChecklistCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Use:   "checklist",
 		Short: "Work with a task's checklist",
 		Long: "Work with a task's checklist.\n\n" +
-			"Items can be listed, viewed, added and updated. The API exposes no\n" +
-			"delete, so an item added by mistake can only be renamed, not removed.",
+			"Items can be listed, viewed, added, updated and deleted. Deleting an\n" +
+			"item also deletes its nested items and cannot be undone.",
 	}
-	cmd.AddCommand(newChecklistListCmd(g), newChecklistViewCmd(g), newChecklistAddCmd(g), newChecklistUpdateCmd(g))
+	cmd.AddCommand(newChecklistListCmd(g), newChecklistViewCmd(g), newChecklistAddCmd(g), newChecklistUpdateCmd(g), newChecklistDeleteCmd(g))
 	return cmd
 }
 
-// checklistItemPath is the route for one item, shared by the GET and the
-// update POST. The two disagree about the task segment: a read resolves the
-// item by its own id and ignores the segment entirely (any task id works, even
-// one that does not exist), while a write validates it and answers 400 —
+// checklistItemPath is the route for one item, shared by the GET, the update
+// POST and the DELETE. A read and a write disagree about the task segment: a
+// read resolves the item by its own id and ignores the segment entirely (any
+// task id works, even one that does not exist), while a write (update or
+// delete) validates it and answers 400 —
 // "Checklist item does not belong to task" or "Task not found by id". pfix
 // forwards the task id the user gave either way, so a write is checked by the
 // API and a read simply is not.
