@@ -296,3 +296,64 @@ func TestRunUpdateWithCFOnly(t *testing.T) {
 		t.Errorf("output = %q", out.String())
 	}
 }
+
+// One update can set some fields and clear others; each clear carries its
+// type's marker in the posted body.
+func TestRunUpdateCFSetAndClear(t *testing.T) {
+	var rawBody string
+	defs := `{"result":"success","customfields":[{"id":1,"type":0},{"id":2,"type":1},{"id":3,"type":20},{"id":4,"type":3}]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == "GET" && r.URL.Path == "/customfield/task":
+			io.WriteString(w, defs)
+		case r.Method == "POST" && r.URL.Path == "/task/57":
+			b, _ := io.ReadAll(r.Body)
+			rawBody = string(b)
+			io.WriteString(w, `{"result":"success"}`)
+		default:
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	o := &updateOptions{
+		id:   57,
+		body: map[string]any{},
+		cfSpecs: []cmdutil.CustomFieldSpec{
+			{ID: 1, Value: "kept"}, {ID: 2, Value: ""}, {ID: 3, Value: ""}, {ID: 4, Value: ""},
+		},
+		client: fakeClient(srv.URL),
+		out:    io.Discard,
+	}
+	if err := runUpdate(context.Background(), o); err != nil {
+		t.Fatalf("runUpdate: %v", err)
+	}
+	want := `"customFieldData":[{"field":{"id":1},"value":"kept"},{"field":{"id":2},"value":null},` +
+		`{"field":{"id":3},"value":[]},{"field":{"id":4},"value":null}]`
+	if !strings.Contains(rawBody, want) {
+		t.Errorf("body = %s, want it to contain %s", rawBody, want)
+	}
+}
+
+// A clear of a field whose type pfix cannot classify fails before the write.
+func TestRunUpdateCFClearUnsupportedType(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			t.Errorf("unexpected %s %s — no write may be sent", r.Method, r.URL.Path)
+		}
+		io.WriteString(w, `{"result":"success","customfields":[{"id":9,"name":"calc","type":24}]}`)
+	}))
+	defer srv.Close()
+
+	o := &updateOptions{
+		id:      57,
+		body:    map[string]any{},
+		cfSpecs: []cmdutil.CustomFieldSpec{{ID: 9, Value: ""}},
+		client:  fakeClient(srv.URL),
+		out:     io.Discard,
+	}
+	err := runUpdate(context.Background(), o)
+	if err == nil || !strings.Contains(err.Error(), "pfix api") {
+		t.Fatalf("err = %v, want an unsupported-type error pointing to pfix api", err)
+	}
+}

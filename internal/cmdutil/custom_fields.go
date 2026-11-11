@@ -12,10 +12,26 @@ import (
 )
 
 // CustomFieldSpec is one parsed `--cf <id>=<value>` entry: the numeric custom
-// field id and its raw (unformatted) value.
+// field id and its raw (unformatted) value. An empty Value (`--cf <id>=`) asks
+// to clear the field.
 type CustomFieldSpec struct {
 	ID    int
 	Value string
+}
+
+// Clear reports whether the spec clears its field rather than setting it.
+func (s CustomFieldSpec) Clear() bool { return s.Value == "" }
+
+// ClearedCustomField returns the id of the first spec that clears its field,
+// and whether there is one. A command where a clear is meaningless (create)
+// uses it to refuse before any request.
+func ClearedCustomField(specs []CustomFieldSpec) (int, bool) {
+	for _, s := range specs {
+		if s.Clear() {
+			return s.ID, true
+		}
+	}
+	return 0, false
 }
 
 // ParseCustomFieldSpecs parses raw "id=value" flag values into specs. It splits
@@ -99,7 +115,8 @@ func BuildCustomFieldData(ctx context.Context, c *planfix.Client, objectType str
 
 // formatCF turns one spec into a customFieldData entry, shaping the value by the
 // field's numeric type code: 0/2 (text) -> string; 1 (number) -> JSON number;
-// 8 (list) -> the option label, as a bare string. Unsupported codes error.
+// 8 (list) -> the option label, as a bare string. Unsupported codes error. An
+// empty value clears the field instead, with its type's marker (see clearValue).
 //
 // A list field is addressed by its option *label*, not by a numeric id: the REST
 // API exposes a list's options only as strings (enumValues) and never as ids.
@@ -108,6 +125,13 @@ func BuildCustomFieldData(ctx context.Context, c *planfix.Client, objectType str
 // rather than select an option. pfix therefore checks the label up front.
 func formatCF(spec CustomFieldSpec, def customFieldDef) (map[string]any, error) {
 	field := map[string]any{"id": spec.ID}
+	if spec.Clear() {
+		v, err := clearValue(def)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"field": field, "value": v}, nil
+	}
 	switch def.Type {
 	case 0, 2: // short text, multiline text
 		return map[string]any{"field": field, "value": spec.Value}, nil
@@ -128,6 +152,29 @@ func formatCF(spec CustomFieldSpec, def customFieldDef) (map[string]any, error) 
 		return map[string]any{"field": field, "value": spec.Value}, nil
 	default:
 		return nil, fmt.Errorf("custom field %d has unsupported type %d; set it via 'pfix api'", spec.ID, def.Type)
+	}
+}
+
+// clearValue returns the marker that clears a field of def's type, following
+// the API's documented rule for customFieldData[].value: null for text, number,
+// list, date/time/period, single references and location; an empty array for
+// sets (values, users, directory entries, tasks, files); false for a checkbox.
+// Computed fields and any type code the rule does not name are refused rather
+// than guessed at — a wrong marker could be stored instead of clearing.
+func clearValue(def customFieldDef) (any, error) {
+	switch def.Type {
+	case 0, 1, 2, 8, // short text, number, multiline text, list
+		3, 4, 5, 6, // date, time, date and time, period
+		9, 10, 11, 12, 13, 16, 22, // single references: directory entry, contact, employee, counterparty, group/employee/contact, task, project
+		25: // location
+		return nil, nil
+	case 14, 15, 17, 20, 21: // list of users, set of directory values, task set, set of values, files
+		return []any{}, nil
+	case 7: // checkbox: unchecking is its clear
+		return false, nil
+	default:
+		return nil, fmt.Errorf("cannot clear custom field %d %q: type %d has no known clearing value; clear it via 'pfix api'",
+			def.ID, def.Name, def.Type)
 	}
 }
 

@@ -168,6 +168,9 @@ pfix task update 57 --cf 88210=Urgent
 # Quote the whole pair if the label contains spaces
 pfix task update 57 --cf "88210=Waiting for reply"
 
+# Clear a custom field — an empty value, on update only
+pfix task update 57 --cf 88206=
+
 # Read custom fields back — request the numeric ids via --fields
 pfix task view 57 --fields id,name,88206
 
@@ -208,8 +211,12 @@ Notes:
   is matched exactly: no trimming, no case folding. Labels may contain spaces,
   so quote the whole pair — `--cf "88210=Waiting for reply"`. Other
   field types (dates, checkboxes, references, multi-select) aren't covered —
-  set them via `pfix api`. The field must be attached to the task's
-  template/process, or the API accepts the write and silently stores nothing.
+  set them via `pfix api`. On `task update`, `--cf <id>=` with an empty value
+  clears the field, for those types too (a checkbox is unchecked); calculated
+  and other computed fields can't be cleared. `task create` refuses a clear.
+  The field must be attached to the task's template/process; otherwise the API
+  refuses the write (*Custom field not permitted by id*). Read the value back
+  to confirm a write took.
   To read a custom field back on `task view`, request its numeric id via
   `--fields`; it renders as an extra `name = value` row below the table.
 

@@ -343,3 +343,23 @@ func TestCreateCFCommaPreserved(t *testing.T) {
 		t.Errorf("specs = %#v, want %#v", specs, want)
 	}
 }
+
+// Clearing is meaningless on a new task, so `--cf <id>=` is refused on create
+// before any request — including the definitions lookup.
+func TestRunCreateRejectsCFClear(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("unexpected %s %s — create with a clear must not reach the API", r.Method, r.URL.Path)
+	}))
+	defer srv.Close()
+
+	o := &createOptions{
+		body:    map[string]any{"name": "T"},
+		cfSpecs: []cmdutil.CustomFieldSpec{{ID: 88206, Value: "x"}, {ID: 85984, Value: ""}},
+		client:  fakeClient(srv.URL),
+		out:     io.Discard,
+	}
+	err := runCreate(context.Background(), o)
+	if err == nil || !strings.Contains(err.Error(), "--cf 85984=") || !strings.Contains(err.Error(), "task update") {
+		t.Fatalf("err = %v, want a create-time clear refusal naming the field and task update", err)
+	}
+}

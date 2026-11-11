@@ -56,11 +56,12 @@ type taskFields struct {
 	customFields []string
 }
 
-// register adds the shared field flags to cmd. withTemplate controls the
-// create-only --template flag (a task's template cannot be changed later).
-func (f *taskFields) register(cmd *cobra.Command, withTemplate bool) {
+// register adds the shared field flags to cmd. create selects the create-only
+// --template flag (a task's template cannot be changed later) and the --cf help
+// variant (only update can clear a custom field).
+func (f *taskFields) register(cmd *cobra.Command, create bool) {
 	fl := cmd.Flags()
-	if withTemplate {
+	if create {
 		fl.IntVar(&f.template, "template", 0, "Task template ID")
 	}
 	fl.IntVar(&f.project, "project", 0, "Project ID")
@@ -73,7 +74,11 @@ func (f *taskFields) register(cmd *cobra.Command, withTemplate bool) {
 	fl.StringSliceVar(&f.participants, "participants", nil, "Participants: user:N, contact:N, or group:N (comma-separated; replaces the list on update)")
 	fl.StringVar(&f.startDate, "start-date", "", `Start date: YYYY-MM-DD, "YYYY-MM-DD HH:MM", or YYYY-MM-DDTHH:MM (time is interpreted in the account timezone)`)
 	fl.StringVar(&f.endDate, "end-date", "", `End date: YYYY-MM-DD, "YYYY-MM-DD HH:MM", or YYYY-MM-DDTHH:MM (time is interpreted in the account timezone)`)
-	fl.StringArrayVar(&f.customFields, "cf", nil, "Custom field value: <id>=<value> (repeatable; id is the numeric field id)")
+	cfHelp := "Custom field value: <id>=<value> (repeatable; id is the numeric field id)"
+	if !create {
+		cfHelp += "; <id>= with an empty value clears the field of any clearable type, including ones --cf cannot set (a checkbox is unchecked)"
+	}
+	fl.StringArrayVar(&f.customFields, "cf", nil, cfHelp)
 }
 
 // apply validates every flag reported set by `set` (cmd.Flags().Changed) and
