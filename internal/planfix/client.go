@@ -102,39 +102,40 @@ func (c *Client) do(ctx context.Context, method, path string, body []byte, heade
 	if c.Retries <= 0 {
 		return nil, fmt.Errorf("planfix: Retries must be > 0")
 	}
-	url := c.URL(path)
-	for attempt := 1; attempt <= c.Retries; attempt++ {
+	return c.attempt(ctx, method, path, body, headers, hc, c.Retries)
+}
+
+// attempt sends the request up to attempts times, retrying connection errors
+// and 5xx responses. attempts == 1 sends exactly once — the path for
+// non-idempotent writes, whose 5xx must surface instead of being repeated.
+func (c *Client) attempt(ctx context.Context, method, path string, body []byte, headers map[string]string, hc *http.Client, attempts int) (*http.Response, error) {
+	for attempt := 1; attempt <= attempts; attempt++ {
 		if err := c.Limiter.Wait(ctx); err != nil {
 			return nil, err
 		}
 		var r io.Reader
+		contentType := ""
 		if len(body) > 0 {
 			r = bytes.NewReader(body)
+			contentType = "application/json"
 		}
-		req, err := http.NewRequestWithContext(ctx, method, url, r)
+		req, err := c.newRequest(ctx, method, path, r, contentType, headers)
 		if err != nil {
-			return nil, fmt.Errorf("build request: %w", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+c.Token)
-		if len(body) > 0 {
-			req.Header.Set("Content-Type", "application/json")
-		}
-		if c.UserAgent != "" {
-			req.Header.Set("User-Agent", c.UserAgent)
-		}
-		for k, v := range headers {
-			req.Header.Set(k, v)
+			return nil, err
 		}
 
 		resp, err := hc.Do(req)
 		if err != nil {
-			if attempt < c.Retries {
+			if attempt < attempts {
 				time.Sleep(c.Backoff(attempt))
 				continue
 			}
-			return nil, fmt.Errorf("request failed after %d attempts: %w", c.Retries, err)
+			if attempts == 1 {
+				return nil, fmt.Errorf("request failed (not retried): %w", err)
+			}
+			return nil, fmt.Errorf("request failed after %d attempts: %w", attempts, err)
 		}
-		if resp.StatusCode >= 500 && attempt < c.Retries {
+		if resp.StatusCode >= 500 && attempt < attempts {
 			resp.Body.Close()
 			time.Sleep(c.Backoff(attempt))
 			continue
@@ -142,4 +143,24 @@ func (c *Client) do(ctx context.Context, method, path string, body []byte, heade
 		return resp, nil
 	}
 	return nil, fmt.Errorf("planfix: request did not complete")
+}
+
+// newRequest builds an authenticated request: Authorization, the optional
+// Content-Type, the default User-Agent, then caller headers (which win).
+func (c *Client) newRequest(ctx context.Context, method, path string, body io.Reader, contentType string, headers map[string]string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, c.URL(path), body)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	if c.UserAgent != "" {
+		req.Header.Set("User-Agent", c.UserAgent)
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	return req, nil
 }

@@ -363,7 +363,7 @@ pfix datatag view 4         # a tag's definition (--json for its field list)
 
 ### Files
 
-List and download the files on a task, contact, or project, and the editor
+List, download, and upload the files on a task, contact, or project, and the editor
 images embedded in a description or comment, which the attachment API never
 returns:
 
@@ -382,6 +382,21 @@ pfix file download 6340746 -o -           # streams the bytes to stdout
 
 `file download` refuses to overwrite an existing file unless `--force`, and
 rejects `--json`/`--jq` — it writes raw bytes, not JSON.
+
+Upload a file, optionally attaching it to a task, contact, or project:
+
+```sh
+pfix file upload report.pdf                      # prints: Uploaded report.pdf as file <id>
+pfix file upload report.pdf --name "May report.pdf"
+pfix file upload report.pdf --task 17            # upload, then attach to task 17
+pfix file upload --from-url https://example.com/spec.json --contact 42
+pfix file upload report.pdf -q                   # print only the new file id
+```
+
+Files are limited to 100 MiB (checked before anything is sent), and an upload
+is never retried. `--from-url` stores whatever the URL returns — including an
+error page — and still reports success, so check the result with `file view`.
+If attaching fails, the upload is kept and the error names its file id.
 
 ### Raw API passthrough
 

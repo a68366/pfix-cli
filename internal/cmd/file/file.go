@@ -1,6 +1,7 @@
 // Package file implements the top-level `file` command group: view metadata for
-// a single file (GET /file/{id}) and download its bytes (GET
-// /file/{id}/download). Read-only.
+// a single file (GET /file/{id}), download its bytes (GET /file/{id}/download),
+// and upload one (POST /file/ or /file/from-url/), optionally attaching it to a
+// task, contact, or project.
 package file
 
 import (
@@ -15,6 +16,6 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Use:   "file",
 		Short: "Work with Planfix files",
 	}
-	cmd.AddCommand(newViewCmd(g), newDownloadCmd(g))
+	cmd.AddCommand(newViewCmd(g), newDownloadCmd(g), newUploadCmd(g))
 	return cmd
 }
