@@ -83,7 +83,7 @@ typed command:
 | `--json` | Emit the raw Planfix API response (pretty-printed) instead of a table — the machine-readable path |
 | `--jq '<expr>'` | Filter the JSON output through a jq expression, one result per line (implies `--json`) |
 | `--fields a,b,c` | Override which Planfix fields are requested and shown as columns (defaults are per-command) |
-| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`/`delete`, `contact restore`, `comment add`/`edit`/`delete`, `checklist add`/`update`/`delete`) |
+| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`/`delete`, `contact restore`, `file rename`, `comment add`/`edit`/`delete`, `checklist add`/`update`/`delete`) |
 
 **Reshaping JSON with `--jq`.** `--jq` runs a jq expression over the same JSON
 `--json` would print, so you don't need to pass both. A result that is a bare
@@ -405,6 +405,17 @@ Files are limited to 100 MiB (checked before anything is sent), and an upload
 is never retried. `--from-url` stores whatever the URL returns — including an
 error page — and still reports success, so check the result with `file view`.
 If attaching fails, the upload is kept and the error names its file id.
+
+Rename or delete a file:
+
+```sh
+pfix file rename 6340746 "May report.pdf"   # no path separators or control characters
+pfix file delete 6340746 --force            # requires --force and cannot be undone
+```
+
+`file delete` removes the file from every task, contact, and project it is
+attached to, but does not erase it: it stays viewable and downloadable by id.
+A deleted file cannot be renamed or attached again.
 
 ### Raw API passthrough
 
