@@ -125,8 +125,7 @@ func newChecklistAddCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Short: "Add an item to a task's checklist",
 		Long: "Add an item to a task's checklist.\n\n" +
 			"Pass --parent to nest the new item under an existing one; the parent\n" +
-			"must belong to the same task. The API has no delete, so an item added\n" +
-			"here can later be renamed, ticked off or moved, but never removed.",
+			"must belong to the same task.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := cmdutil.ValidateID(args[0])

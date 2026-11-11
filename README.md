@@ -81,7 +81,7 @@ typed command:
 | `--json` | Emit the raw Planfix API response (pretty-printed) instead of a table — the machine-readable path |
 | `--jq '<expr>'` | Filter the JSON output through a jq expression, one result per line (implies `--json`) |
 | `--fields a,b,c` | Override which Planfix fields are requested and shown as columns (defaults are per-command) |
-| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`, `comment add`/`edit`/`delete`, `checklist add`/`update`) |
+| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`, `comment add`/`edit`/`delete`, `checklist add`/`update`/`delete`) |
 
 **Reshaping JSON with `--jq`.** `--jq` runs a jq expression over the same JSON
 `--json` would print, so you don't need to pass both. A result that is a bare
@@ -225,16 +225,18 @@ pfix task checklist update 17 29149 --done        # tick it off
 pfix task checklist update 17 29149 --done=false  # untick it
 pfix task checklist update 17 29149 --name "Ship the notes" --assignees user:5,group:7
 pfix task checklist update 17 29150 --parent 29149            # move it under another item
+
+pfix task checklist delete 17 29149 --force       # also deletes its nested items
 ```
 
-- There is **no delete**: the API exposes none, so an item can be renamed,
-  ticked off or moved, but never removed.
+- `delete` requires `--force` and **cannot be undone**. Deleting an item also
+  deletes every item nested under it.
 - `update` sends only the flags you pass, so ticking an item leaves its text
   and assignees untouched. `--assignees` **replaces** the stored list.
 - Items nest. `--parent` takes another item of the same task, and the listing is
   flat but depth-first — each nested item follows its parent — so request
   `--fields parent` to see the structure. A top-level item's parent is the task.
-- `view` and `update` take both ids, and the API treats them differently: a read
+- `view`, `update` and `delete` take both ids, and the API treats them differently: a read
   resolves the item by its own id and ignores the task id, while a write checks
   the pair and answers `400` if the item belongs elsewhere. Take both ids from
   `checklist list`.
