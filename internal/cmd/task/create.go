@@ -85,7 +85,9 @@ func runCreate(ctx context.Context, o *createOptions) error {
 		}
 		o.body["customFieldData"] = data
 	}
-	raw, err := client.JSON(ctx, "POST", "task/", o.body)
+	// A create is sent once: a retry after a 5xx the server already acted on
+	// would create a duplicate task.
+	raw, err := client.JSONOnce(ctx, "POST", "task/", o.body)
 	if err != nil {
 		return err
 	}

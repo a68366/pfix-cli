@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -122,6 +123,57 @@ func TestRunAPIReturnsErrorOnNon2xx(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "nope") {
 		t.Errorf("body should still be printed, got %q", out.String())
+	}
+}
+
+// Only GET/HEAD/OPTIONS are retried on a 5xx; any other method — a create, a
+// delete, or a POST that happens to be a read — is sent once, because pfix
+// cannot tell from a raw request whether repeating it is safe.
+func TestRunAPIRetryByMethod(t *testing.T) {
+	tests := []struct {
+		name     string
+		method   string
+		setMeth  bool
+		input    string
+		wantHits int32
+		wantErr  bool
+	}{
+		{name: "GET retries", method: "GET", setMeth: true, wantHits: 2},
+		{name: "lowercase get retries", method: "get", setMeth: true, wantHits: 2},
+		{name: "HEAD retries", method: "HEAD", setMeth: true, wantHits: 2},
+		{name: "OPTIONS retries", method: "OPTIONS", setMeth: true, wantHits: 2},
+		{name: "implicit POST from --input is sent once", input: `{"name":"x"}`, wantHits: 1, wantErr: true},
+		{name: "explicit POST is sent once", method: "POST", setMeth: true, wantHits: 1, wantErr: true},
+		{name: "DELETE is sent once", method: "DELETE", setMeth: true, wantHits: 1, wantErr: true},
+		{name: "PUT is sent once", method: "PUT", setMeth: true, wantHits: 1, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var hits int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if atomic.AddInt32(&hits, 1) == 1 {
+					w.WriteHeader(http.StatusBadGateway)
+					return
+				}
+				io.WriteString(w, `{"result":"success"}`)
+			}))
+			defer srv.Close()
+
+			o := optsFor(srv.URL, strings.NewReader(tt.input), &strings.Builder{})
+			if tt.setMeth {
+				o.method, o.methodSet = tt.method, true
+			}
+			if tt.input != "" {
+				o.inputFile = "-"
+			}
+			err := runAPI(context.Background(), o, "task/")
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if got := atomic.LoadInt32(&hits); got != tt.wantHits {
+				t.Errorf("requests = %d, want %d", got, tt.wantHits)
+			}
+		})
 	}
 }
 

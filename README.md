@@ -427,6 +427,7 @@ A deleted file cannot be renamed or attached again.
 ### Raw API passthrough
 
 `pfix api <path>` makes an authenticated request to any Planfix REST endpoint and prints the raw JSON response — handy for endpoints without a dedicated command yet, and for scripting.
+Only `GET`/`HEAD`/`OPTIONS` requests are retried on a connection error or 5xx; every other method is sent exactly once.
 
 ```sh
 # GET a task

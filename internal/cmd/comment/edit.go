@@ -101,6 +101,8 @@ func runEdit(ctx context.Context, o *editOptions, idStr string) error {
 	if o.silent {
 		path += "?silent=true"
 	}
+	// Retried: an edit sets the same values again, so a repeat after a 5xx the
+	// server already applied changes nothing.
 	raw, err := client.JSON(ctx, "POST", path, o.body)
 	if err != nil {
 		return err

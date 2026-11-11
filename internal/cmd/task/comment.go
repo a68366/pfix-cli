@@ -222,7 +222,8 @@ func runCommentAdd(ctx context.Context, o *commentAddOptions) error {
 	if o.silent {
 		path += "?silent=true"
 	}
-	raw, err := client.JSON(ctx, "POST", path, payload)
+	// Sent once: a retry could post the comment twice.
+	raw, err := client.JSONOnce(ctx, "POST", path, payload)
 	if err != nil {
 		return err
 	}

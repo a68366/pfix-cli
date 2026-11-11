@@ -157,7 +157,8 @@ func runChecklistAdd(ctx context.Context, o *checklistAddOptions) error {
 		return err
 	}
 	path := "task/" + strconv.Itoa(o.taskID) + "/checklist"
-	raw, err := client.JSON(ctx, "POST", path, o.body)
+	// Sent once: a retry could add the item twice.
+	raw, err := client.JSONOnce(ctx, "POST", path, o.body)
 	if err != nil {
 		return err
 	}

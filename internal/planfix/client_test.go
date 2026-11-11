@@ -107,6 +107,31 @@ func TestDoRetriesOn5xxThenSucceeds(t *testing.T) {
 	}
 }
 
+// DoOnce returns the first response as is — a 5xx is handed back, not retried.
+func TestDoOnceReturns5xxWithoutRetry(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		io.WriteString(w, `{"ok":true}`)
+	}))
+	defer srv.Close()
+
+	resp, err := fastClient(srv.URL).DoOnce(context.Background(), "POST", "task/", []byte(`{}`), nil)
+	if err != nil {
+		t.Fatalf("DoOnce: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 500 {
+		t.Fatalf("status = %d, want 500", resp.StatusCode)
+	}
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Fatalf("calls = %d, want 1", got)
+	}
+}
+
 func TestDoRequiresPositiveRetries(t *testing.T) {
 	c := planfix.New("example.planfix.com", "secret")
 	c.Retries = 0
