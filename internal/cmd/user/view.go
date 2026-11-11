@@ -17,7 +17,7 @@ import (
 // but it enriches --json.
 const viewDefaultFields = "id,name,midname,lastname,email,login,status,role,position"
 
-const viewAvailableFields = "id,name,midname,lastname,gender,isDeleted,birthDate,groups,role,login,email,secondaryEmails,telegramId,telegram,status,phones,customFieldData,languageCode,communicationLanguageCode,timezone,position,workspace,personalManagers,avatarUrl,sourceObjectId,sourceDataVersion"
+const viewAvailableFields = "id,name,midname,lastname,gender,isDeleted,birthDate,groups,role,login,email,secondaryEmails,telegramId,telegram,status,phones,customFieldData,languageCode,communicationLanguageCode,timezone,position,workspace,personalManagers,avatarUrl,temporaryReplacement,sourceObjectId,sourceDataVersion"
 
 var viewColumns = []output.Column{
 	{Header: "ID", Path: "id"},

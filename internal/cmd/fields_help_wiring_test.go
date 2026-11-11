@@ -34,42 +34,43 @@ func TestFieldsHelpWiring(t *testing.T) {
 	root := NewRootCmd()
 	cases := []struct {
 		path      []string
-		wantCount string // e.g. "Available fields (42):"; empty skips the block check (see below)
-		wantCF    bool   // custom-field note present
+		wantCount string   // e.g. "Available fields (42):"; empty skips the block check (see below)
+		wantCF    bool     // custom-field note present
+		wantNames []string // field names that must appear in the block (spec 1.8.2 additions)
 	}{
-		{[]string{"task", "list"}, "Available fields (42):", true},
-		{[]string{"task", "view"}, "Available fields (45):", true},
-		{[]string{"comment", "view"}, "Available fields (23):", false},
-		{[]string{"task", "comment", "list"}, "Available fields (23):", false},
-		{[]string{"task", "checklist", "list"}, "Available fields (6):", false},
-		{[]string{"task", "checklist", "view"}, "Available fields (6):", false},
-		{[]string{"project", "list"}, "Available fields (23):", false},
-		{[]string{"project", "view"}, "Available fields (23):", false},
-		{[]string{"contact", "list"}, "Available fields (31):", false},
-		{[]string{"contact", "view"}, "Available fields (36):", false},
-		{[]string{"user", "list"}, "Available fields (26):", false},
-		{[]string{"user", "view"}, "Available fields (26):", false},
-		{[]string{"report", "list"}, "Available fields (3):", false},
-		{[]string{"report", "view"}, "Available fields (3):", false},
-		{[]string{"datatag", "list"}, "Available fields (4):", false},
-		{[]string{"datatag", "view"}, "Available fields (4):", false},
-		{[]string{"object", "list"}, "Available fields (32):", false},
-		{[]string{"object", "view"}, "Available fields (32):", false},
-		{[]string{"customfield", "list"}, "Available fields (10):", false},
-		{[]string{"customfield", "types"}, "Available fields (2):", false},
-		{[]string{"user", "groups"}, "Available fields (2):", false},
-		{[]string{"contact", "groups"}, "Available fields (2):", false},
-		{[]string{"user", "positions"}, "Available fields (2):", false},
-		{[]string{"task", "processes"}, "Available fields (2):", false},
-		{[]string{"contact", "processes"}, "Available fields (2):", false},
-		{[]string{"task", "statuses"}, "Available fields (7):", false},
-		{[]string{"task", "files"}, "Available fields (4):", false},
-		{[]string{"contact", "files"}, "Available fields (4):", false},
-		{[]string{"project", "files"}, "Available fields (4):", false},
+		{[]string{"task", "list"}, "Available fields (42):", true, nil},
+		{[]string{"task", "view"}, "Available fields (45):", true, nil},
+		{[]string{"comment", "view"}, "Available fields (23):", false, nil},
+		{[]string{"task", "comment", "list"}, "Available fields (23):", false, nil},
+		{[]string{"task", "checklist", "list"}, "Available fields (6):", false, nil},
+		{[]string{"task", "checklist", "view"}, "Available fields (6):", false, nil},
+		{[]string{"project", "list"}, "Available fields (23):", false, nil},
+		{[]string{"project", "view"}, "Available fields (23):", false, nil},
+		{[]string{"contact", "list"}, "Available fields (32):", false, []string{"taxId"}},
+		{[]string{"contact", "view"}, "Available fields (38):", false, []string{"taxId", "timezone"}},
+		{[]string{"user", "list"}, "Available fields (27):", false, []string{"temporaryReplacement"}},
+		{[]string{"user", "view"}, "Available fields (27):", false, []string{"temporaryReplacement"}},
+		{[]string{"report", "list"}, "Available fields (3):", false, nil},
+		{[]string{"report", "view"}, "Available fields (3):", false, nil},
+		{[]string{"datatag", "list"}, "Available fields (4):", false, nil},
+		{[]string{"datatag", "view"}, "Available fields (4):", false, nil},
+		{[]string{"object", "list"}, "Available fields (32):", false, nil},
+		{[]string{"object", "view"}, "Available fields (32):", false, nil},
+		{[]string{"customfield", "list"}, "Available fields (11):", false, []string{"listValuesColors", "mainValue"}},
+		{[]string{"customfield", "types"}, "Available fields (2):", false, nil},
+		{[]string{"user", "groups"}, "Available fields (2):", false, nil},
+		{[]string{"contact", "groups"}, "Available fields (2):", false, nil},
+		{[]string{"user", "positions"}, "Available fields (2):", false, nil},
+		{[]string{"task", "processes"}, "Available fields (2):", false, nil},
+		{[]string{"contact", "processes"}, "Available fields (2):", false, nil},
+		{[]string{"task", "statuses"}, "Available fields (7):", false, nil},
+		{[]string{"task", "files"}, "Available fields (4):", false, nil},
+		{[]string{"contact", "files"}, "Available fields (4):", false, nil},
+		{[]string{"project", "files"}, "Available fields (4):", false, nil},
 		// template list has no fixed vocabulary — the selectable fields depend on
 		// the object type being listed — so it carries no "Available fields"
 		// block, only the Default fields line.
-		{[]string{"template", "list"}, "", false},
+		{[]string{"template", "list"}, "", false, nil},
 	}
 	for _, tc := range cases {
 		t.Run(strings.Join(tc.path, "/"), func(t *testing.T) {
@@ -80,6 +81,11 @@ func TestFieldsHelpWiring(t *testing.T) {
 			}
 			if tc.wantCount != "" && !strings.Contains(long, tc.wantCount) {
 				t.Errorf("%v Long missing %q:\n%s", tc.path, tc.wantCount, long)
+			}
+			for _, name := range tc.wantNames {
+				if !strings.Contains(long, name) {
+					t.Errorf("%v Long missing field %q:\n%s", tc.path, name, long)
+				}
 			}
 			hasCF := strings.Contains(long, "pfix customfield list task")
 			if hasCF != tc.wantCF {

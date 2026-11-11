@@ -13,7 +13,7 @@ import (
 
 const listDefaultFields = "id,name,lastname,email,status"
 
-const listAvailableFields = "id,name,midname,lastname,gender,isDeleted,birthDate,groups,role,login,email,secondaryEmails,telegramId,telegram,status,phones,customFieldData,languageCode,communicationLanguageCode,timezone,position,workspace,personalManagers,avatarUrl,sourceObjectId,sourceDataVersion"
+const listAvailableFields = "id,name,midname,lastname,gender,isDeleted,birthDate,groups,role,login,email,secondaryEmails,telegramId,telegram,status,phones,customFieldData,languageCode,communicationLanguageCode,timezone,position,workspace,personalManagers,avatarUrl,temporaryReplacement,sourceObjectId,sourceDataVersion"
 
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},
