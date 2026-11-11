@@ -57,6 +57,10 @@ Check connectivity and that the active token is accepted with `pfix ping` — it
 exit code) and exits non-zero if the token is rejected. It is the lightest such check;
 `pfix auth status` uses the same `GET /ping` probe to validate the token.
 
+Show who the active token belongs to with `pfix whoami` — id, name, login, email,
+type, account, and groups (`-q` prints just the id, e.g. `user:1`; `--json` the raw
+response). `pfix auth status` adds the same identity as a `User:` line.
+
 Print the client version — number, commit, and build date — with `pfix version`
 or the equivalent `pfix --version`.
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/a68366/pfix-cli/internal/cmd/whoami"
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
@@ -58,5 +59,15 @@ func runStatus(ctx context.Context, o *statusOptions) error {
 		return cmdutil.DescribeAPIError(err)
 	}
 	fmt.Fprintln(o.out, "Status:  valid")
+
+	// The user line is informational: /userinfo can refuse a login type the
+	// token check accepts, so its failure never changes the exit status.
+	info, err := whoami.Fetch(ctx, client)
+	switch {
+	case err != nil:
+		fmt.Fprintf(o.out, "User:    unavailable (%v)\n", err)
+	case info.ID != "":
+		fmt.Fprintf(o.out, "User:    %s\n", info.Summary())
+	}
 	return nil
 }
