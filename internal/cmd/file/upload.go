@@ -256,7 +256,8 @@ func attach(ctx context.Context, o *uploadOptions, fileID int, target string, ta
 }
 
 // describeUploadError adds a hint for the API codes the upload and attach
-// endpoints are known to return; anything else goes to the shared mapping.
+// endpoints are known to return; anything else is returned as is (auth
+// failures get their hint at the root).
 func describeUploadError(err error) error {
 	var apiErr *planfix.APIError
 	if !errors.As(err, &apiErr) {
@@ -274,5 +275,5 @@ func describeUploadError(err error) error {
 	case 43:
 		return fmt.Errorf("%w — the Idempotency-Key was already used", err)
 	}
-	return cmdutil.DescribeAPIError(err)
+	return err
 }

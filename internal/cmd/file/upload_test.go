@@ -314,7 +314,7 @@ func TestDescribeUploadErrorHints(t *testing.T) {
 		{7001, "no URL to fetch"},
 		{1000, "no task with that id"},
 		{43, "Idempotency-Key was already used"},
-		{1, "pfix auth login"}, // falls through to the shared mapping
+		{1, "Rest API error"}, // passes through; the root adds the auth hint
 	}
 	for _, tt := range tests {
 		api := &uploadAPI{uploadStatus: 400, uploadBody: `{"result":"fail","code":` + itoa(tt.code) + `,"error":"Rest API error"}`}

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -77,7 +78,7 @@ func TestRunPingQuiet(t *testing.T) {
 	}
 }
 
-func TestRunPingUnknownTokenHint(t *testing.T) {
+func TestRunPingUnknownTokenReturnsAPIError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
 		io.WriteString(w, `{"result":"fail","code":1,"error":"Access denied, unknown token"}`)
@@ -90,7 +91,9 @@ func TestRunPingUnknownTokenHint(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error on HTTP 401")
 	}
-	if !strings.Contains(err.Error(), "auth login") {
-		t.Errorf("error should carry the re-login hint: %v", err)
+	// The command returns the API error as is; the root adds the auth hint.
+	var apiErr *planfix.APIError
+	if !errors.As(err, &apiErr) || apiErr.Code != 1 {
+		t.Errorf("want the code 1 *planfix.APIError, got %v", err)
 	}
 }

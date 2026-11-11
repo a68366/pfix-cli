@@ -82,7 +82,8 @@ func runChecklistDelete(ctx context.Context, o *checklistDeleteOptions, taskArg,
 // repeated delete answers, and what a nested item answers once its parent was
 // deleted, since a delete cascades. Code 6 means the item exists, but under
 // another task. Everything else — including code 1000, an unknown task id,
-// whose message is already plain — falls through to the shared auth hints.
+// whose message is already plain — is returned as is (auth failures get
+// their hint at the root).
 func describeChecklistDeleteError(err error) error {
 	var apiErr *planfix.APIError
 	if errors.As(err, &apiErr) {
@@ -93,5 +94,5 @@ func describeChecklistDeleteError(err error) error {
 			return fmt.Errorf("%w — pass the id of the task the item belongs to (see `pfix task checklist list`)", err)
 		}
 	}
-	return cmdutil.DescribeAPIError(err)
+	return err
 }

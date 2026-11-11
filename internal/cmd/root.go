@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -26,6 +27,13 @@ import (
 
 // NewRootCmd builds the root command tree.
 func NewRootCmd() *cobra.Command {
+	root, _ := newRootCmd()
+	return root
+}
+
+// newRootCmd builds the root command tree and returns the global options its
+// flags parse into, which Execute reads once the command has run.
+func newRootCmd() (*cobra.Command, *cmdutil.GlobalOpts) {
 	g := &cmdutil.GlobalOpts{}
 
 	root := &cobra.Command{
@@ -79,11 +87,23 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(customfield.NewCmd(g))
 	root.AddCommand(object.NewCmd(g))
 
-	return root
+	return root, g
 }
 
 // Execute runs the root command with ctx as the base context, so a cancelled
 // ctx (e.g. from a Ctrl-C signal) propagates to in-flight requests.
 func Execute(ctx context.Context) error {
-	return NewRootCmd().ExecuteContext(ctx)
+	root, g := newRootCmd()
+	return run(ctx, root, g)
+}
+
+// run executes root and adds the auth hint to whatever error any command
+// returns. This is the one place API errors are described, so every command
+// gets the hint and none gets it twice.
+func run(ctx context.Context, root *cobra.Command, g *cmdutil.GlobalOpts) error {
+	err := root.ExecuteContext(ctx)
+	return cmdutil.DescribeAPIError(err, cmdutil.AuthContext{
+		Profile:      g.Profile,
+		TokenFromEnv: os.Getenv("PFIX_TOKEN") != "",
+	})
 }

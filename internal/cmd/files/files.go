@@ -132,7 +132,7 @@ func runAttached(ctx context.Context, o *listOptions) error {
 	}
 	raw, err := client.JSON(ctx, "GET", path, nil)
 	if err != nil {
-		return cmdutil.DescribeAPIError(err)
+		return err
 	}
 	if o.json {
 		return output.EmitJSON(o.out, raw, o.jq)
@@ -174,7 +174,7 @@ func runInline(ctx context.Context, o *listOptions) error {
 	for _, id := range ids {
 		raw, err := client.JSON(ctx, "GET", "file/"+strconv.Itoa(id), nil)
 		if err != nil {
-			return cmdutil.DescribeAPIError(err)
+			return err
 		}
 		var env struct {
 			File map[string]any `json:"file"`
@@ -209,7 +209,7 @@ func gatherInlineHTML(ctx context.Context, client *planfix.Client, o *listOption
 	case "project":
 		raw, err := client.JSON(ctx, "GET", "project/"+strconv.Itoa(o.id)+"?fields=description", nil)
 		if err != nil {
-			return "", cmdutil.DescribeAPIError(err)
+			return "", err
 		}
 		var env struct {
 			Project struct {
@@ -235,7 +235,7 @@ func gatherCommentHTML(ctx context.Context, client *planfix.Client, typ string, 
 		body := map[string]any{"offset": offset, "pageSize": 100, "fields": "description"}
 		raw, err := client.JSON(ctx, "POST", path, body)
 		if err != nil {
-			return "", cmdutil.DescribeAPIError(err)
+			return "", err
 		}
 		var env struct {
 			Comments []struct {

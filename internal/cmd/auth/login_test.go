@@ -9,6 +9,7 @@ import (
 
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 	"github.com/a68366/pfix-cli/internal/config"
+	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
 func baseOpts(t *testing.T, validate func(context.Context, string, string) error) loginOptions {
@@ -165,5 +166,23 @@ func TestMaskToken(t *testing.T) {
 	}
 	if got := cmdutil.MaskToken("ab"); got != "****" {
 		t.Errorf("MaskToken short = %q", got)
+	}
+}
+
+// TestRunLoginRejectedTokenGetsNoAuthHint: login's own credential check
+// failing must not get the root's "run `pfix auth login`" hint — that would
+// send the user back to the command that just failed.
+func TestRunLoginRejectedTokenGetsNoAuthHint(t *testing.T) {
+	o := baseOpts(t, func(context.Context, string, string) error {
+		return planfix.ParseError(401, []byte(`{"result":"fail","code":1,"error":"Access denied, unknown token"}`))
+	})
+	err := runLogin(context.Background(), o)
+	if err == nil {
+		t.Fatal("want error")
+	}
+	got := cmdutil.DescribeAPIError(err, cmdutil.AuthContext{Profile: "test", TokenFromEnv: true}).Error()
+	want := "credential check failed: planfix API error (HTTP 401): Access denied, unknown token"
+	if got != want {
+		t.Errorf("err = %q, want %q", got, want)
 	}
 }

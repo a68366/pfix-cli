@@ -54,7 +54,7 @@ func runView(ctx context.Context, o *viewOptions, idStr string) error {
 	}
 	raw, err := client.JSON(ctx, "GET", "file/"+strconv.Itoa(id), nil)
 	if err != nil {
-		return cmdutil.DescribeAPIError(err)
+		return err
 	}
 	if o.json {
 		return output.EmitJSON(o.out, raw, o.jq)

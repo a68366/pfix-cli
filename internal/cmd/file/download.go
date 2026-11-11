@@ -98,7 +98,7 @@ func runDownload(ctx context.Context, o *downloadOptions) error {
 	if resp.StatusCode >= 300 {
 		data, _ := io.ReadAll(resp.Body)
 		cleanupPartial(f)
-		return cmdutil.DescribeAPIError(planfix.ParseError(resp.StatusCode, data))
+		return planfix.ParseError(resp.StatusCode, data)
 	}
 
 	n, err := io.Copy(w, resp.Body)
@@ -132,7 +132,7 @@ func resolveDest(ctx context.Context, o *downloadOptions, client *planfix.Client
 	fetchName := func() (string, error) {
 		raw, err := client.JSON(ctx, "GET", idPath, nil)
 		if err != nil {
-			return "", cmdutil.DescribeAPIError(err)
+			return "", err
 		}
 		var env struct {
 			File struct {
