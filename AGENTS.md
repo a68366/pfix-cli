@@ -21,7 +21,7 @@ This file holds only the rules and the API behavior that change how code must be
 - `cmd/pfix/main.go` — canonical entry point (`go install .../cmd/pfix@latest` yields `pfix`). The root `main.go` is a compatibility shim so the module-root `go install` keeps working (as `pfix-cli`). Both only call `cmd.Main()` (`internal/cmd/main.go`), which wires `signal.NotifyContext(os.Interrupt)` so `Ctrl-C` cancels long-running commands (downloads, uploads).
 - `internal/cmd/<resource>/` — one Cobra package per command group (`task`, `project`, `contact`, `user`, `report`, `datatag`, `template`, `customfield`, `object`, `file`, `comment`, `config`, `auth`, `api`), plus `whoami` (also used by `auth status`), and `root`, `version`, `ping`. `internal/config` is imported as `pfconfig` inside `internal/cmd/config` to avoid the name collision.
 - `internal/cmd/{processes,groups,files}/` — list commands shared by several parents (e.g. `files.NewCmd(g, files.Options{...})` backs `task|contact|project files`, each registering only the flags its endpoint supports).
-- `internal/cmdutil/` — `GlobalOpts` (persistent flags), `Client()`/`ClientFunc()`, and the resource-agnostic helpers every command reuses (`ValidateID`, `FieldsCSV`, `DecodeJSON`, `ApplyFilter`, `ParsePeople`, `ParseTimePoint`, `DescribeAPIError`, `ParseCustomFieldSpecs`/`BuildCustomFieldData`, `FieldsHelp`, `ScanFileIDs`, `SafeFileName`). Check here before writing a helper.
+- `internal/cmdutil/` — `GlobalOpts` (persistent flags), `Client()`/`ClientFunc()`, and the resource-agnostic helpers every command reuses (`ValidateID`, `FieldsCSV`, `DecodeJSON`, `ApplyFilter`, `ParsePeople`, `ParseTimePoint`, `DescribeAPIError`, `ParseCustomFieldSpecs`/`BuildCustomFieldData`, `FieldsHelp`, `ScanFileIDs`, `SafeFileName`, `CheckResult`). Check here before writing a helper.
 - `internal/planfix/` — the REST client: `Do` (auth, throttle, retries), `JSON` (typed-command convenience; status ≥300 → `*APIError` with the app `Code`), `JSONOnce` (single attempt), `Stream` (GET with the body unread, no whole-request timeout), `Upload` (multipart, single attempt, streamed).
 - `internal/output/` — `Table`/`Detail` (tabwriter), dot-path `Flatten`, `ColumnsFor`, optional `Column.Format` hook (`Table` only), `EmitJSON` (the `--jq`-aware JSON entry point).
 - `internal/config/` — profile load/save (atomic, 0600) and precedence (`Resolve`, `ResolveProfileName`). `internal/buildinfo/` — version/commit/date via ldflags.
@@ -35,7 +35,7 @@ This file holds only the rules and the API behavior that change how code must be
 - Transport: `Client.Do` returns the response for any status (use `planfix.ParseError` for detail) and retries connection errors and 5xx, never 4xx. **Non-idempotent writes must not go through the retrying path** — use `JSONOnce`/`Upload` (single attempt), and never send an `Idempotency-Key` (a reused key is rejected with `409 code 43`, not replayed). Every request sends `User-Agent: pfix/<version>`; a caller-supplied header wins.
 - Proxy: every HTTP path resolves its proxy through the `Client.Proxy` field (default `http.ProxyFromEnvironment`) by building transports with `newTransport`. Never use a bare `http.Transport` — it silently disables proxying. `ALL_PROXY` is not honored (Go stdlib limitation).
 - Updates send only the fields the user set (the API applies partial updates); an update with nothing to change refuses instead of posting an empty body.
-- Destructive commands (`comment delete`, `task checklist delete`): refuse to run without `--force` and never prompt, even interactively — behavior stays identical in a terminal and a script, with no TTY branch to keep in sync. Follow this for any future destructive command.
+- Destructive commands (`task delete`, `contact delete`, `comment delete`, `task checklist delete`): refuse to run without `--force` and never prompt, even interactively — behavior stays identical in a terminal and a script, with no TTY branch to keep in sync. Follow this for any future destructive command.
 - Validate client-side whenever the API would accept bad input silently (see below), and say so in the flag help when a silent behavior cannot be detected.
 
 ## API behavior to design around
@@ -56,12 +56,13 @@ Each item below was verified live against the API. These are the traps that shap
 
 **Responses that need decoding beyond `result`.**
 - Checklist update answers `200 success` with a `failures` array — decode it and fail on a non-empty one.
+- Deletes can answer `200` with `result: "fail"` (seen on file delete) — run delete/restore responses through `cmdutil.CheckResult`. Send deletes and restores with `JSONOnce`: a retry after one the server carried out answers "not found" (`1000`/`2000`) or "not deleted" (`2002`).
 - `report view` arrives under the misspelled key `repost` (fall back to `report`). Envelope keys are not always the resource name (`items`/`item` for checklists, `dataTags`/`dataTag`, `customFieldTypes`).
 - File `size` is `ceil(bytes / 1024)`, not bytes — use `Content-Length` for exact sizes.
 
 **Per-resource facts.**
-- Tasks: a task's process is fixed at creation; Draft (`--status 0`) is create-only; dates are `dd-MM-yyyy`/`HH:mm` in the account timezone; `GET /process/task` lists only custom processes (the built-in one is reachable through a task's `processId`). `--saved-filter` and `--filter` combine as AND.
-- Contacts: `contact create` needs a template. `description` is plaintext on contacts but HTML on tasks/projects — the inline-file scrape reads a contact's comment feed instead.
+- Tasks: delete is irreversible (no restore endpoint) and does not cascade to subtasks — they survive as top-level tasks with `parent` removed; checklist items are deleted; comments and files survive, unlinked. A task's process is fixed at creation; Draft (`--status 0`) is create-only; dates are `dd-MM-yyyy`/`HH:mm` in the account timezone; `GET /process/task` lists only custom processes (the built-in one is reachable through a task's `processId`). `--saved-filter` and `--filter` combine as AND.
+- Contacts: `contact create` needs a template. Delete is restorable — `POST /contact/restore/` `{"id":N}` brings it back under the same id; restoring one that is not deleted fails with `2002`. `description` is plaintext on contacts but HTML on tasks/projects — the inline-file scrape reads a contact's comment feed instead.
 - Users: create is disabled by the API; `user update` is declined. Only `user/groups` resolves `group:N` assignee references.
 - Comments: a task's description seeds comment #1 and then diverges — edits never re-sync either way, and that first comment cannot be deleted (`code 0`). Deletion is soft (still listed under `--include-deleted`, no restore). `POST /comment/list` requires a `filters` array.
 - Checklists: task-only; items nest via `parent` (validated); a checklist item is a task record that `GET /task/{id}` refuses. Delete is hard and cascades to nested items.
@@ -87,4 +88,4 @@ Each item below was verified live against the API. These are the traps that shap
 
 - **Next (as API access allows):** a typed `directory` resource; running saved reports (`report` covers definitions only).
 - **Postponed — not exposed via REST:** `process` mutation and running processes / workflow actions.
-- **Declined by the user:** deletes (except `comment delete` and `task checklist delete`, both shipped at the user's request), `user update`, typed filter flags, and color.
+- **Declined by the user:** deletes (except `task delete`, `contact delete` (+ `contact restore`), `comment delete` and `task checklist delete`, all shipped at the user's request), `user update`, typed filter flags, and color.
