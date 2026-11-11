@@ -14,7 +14,7 @@ import (
 
 const listDefaultFields = "id,name,type"
 
-const listAvailableFields = "id,name,names,type,objectType,groupId,directoryId,directoryFields,enumValues,mainValue"
+const listAvailableFields = "id,name,names,type,objectType,groupId,directoryId,directoryFields,enumValues,listValuesColors,mainValue"
 
 var listColumns = []output.Column{
 	{Header: "ID", Path: "id"},

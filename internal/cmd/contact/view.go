@@ -17,7 +17,7 @@ import (
 // in a flat cell) but it enriches --json.
 const viewDefaultFields = "id,name,midname,lastname,email,phones,isCompany,position,description"
 
-const viewAvailableFields = "id,template,name,midname,lastname,gender,description,address,site,email,additionalEmailAddresses,skype,telegramId,telegram,facebook,instagram,viberId,position,group,isCompany,isDeleted,birthDate,createdDate,dateOfLastUpdate,supervisors,phones,companies,contacts,files,dataTags,avatarUrl,addedBy,languageCode,communicationLanguageCode,sourceObjectId,sourceDataVersion"
+const viewAvailableFields = "id,template,name,midname,lastname,gender,description,address,site,email,additionalEmailAddresses,skype,taxId,telegramId,telegram,facebook,instagram,viberId,position,group,isCompany,isDeleted,birthDate,createdDate,dateOfLastUpdate,supervisors,phones,companies,contacts,files,dataTags,avatarUrl,addedBy,languageCode,communicationLanguageCode,timezone,sourceObjectId,sourceDataVersion"
 
 var viewColumns = []output.Column{
 	{Header: "ID", Path: "id"},
