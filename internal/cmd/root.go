@@ -20,6 +20,7 @@ import (
 	"github.com/a68366/pfix-cli/internal/cmd/task"
 	"github.com/a68366/pfix-cli/internal/cmd/template"
 	"github.com/a68366/pfix-cli/internal/cmd/user"
+	"github.com/a68366/pfix-cli/internal/cmd/whoami"
 	"github.com/a68366/pfix-cli/internal/cmdutil"
 )
 
@@ -62,6 +63,7 @@ func NewRootCmd() *cobra.Command {
 
 	root.AddCommand(newVersionCmd())
 	root.AddCommand(newPingCmd(g))
+	root.AddCommand(whoami.NewCmd(g))
 	root.AddCommand(auth.NewCmd(g))
 	root.AddCommand(api.NewCmd(g))
 	root.AddCommand(config.NewCmd(g))
