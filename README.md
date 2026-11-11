@@ -17,16 +17,14 @@ An unofficial command-line client for the [Planfix](https://planfix.com) REST AP
 ```sh
 git clone https://github.com/a68366/pfix-cli
 cd pfix-cli
-go build -o pfix .
+go build -o pfix ./cmd/pfix
 ```
 
 Or via `go install` (installs to `$(go env GOPATH)/bin`):
 
 ```sh
-go install github.com/a68366/pfix-cli@latest
+go install github.com/a68366/pfix-cli/cmd/pfix@latest
 ```
-
-> `go install` names the binary `pfix-cli`; rename it to `pfix` if you prefer the shorter command.
 
 ## Authenticate
 
@@ -470,7 +468,7 @@ pfix honors the standard proxy environment variables for every command: `HTTPS_P
 go test ./...        # run the test suite
 go vet ./...         # static analysis
 gofmt -l .           # formatting check (prints nothing when clean)
-go build -o pfix .   # build the binary
+go build -o pfix ./cmd/pfix   # build the binary
 golangci-lint run    # lint — required, CI gates on it
 ```
 

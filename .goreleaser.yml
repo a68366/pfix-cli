@@ -8,7 +8,7 @@ before:
 
 builds:
   - id: pfix
-    main: .
+    main: ./cmd/pfix
     binary: pfix
     env:
       - CGO_ENABLED=0

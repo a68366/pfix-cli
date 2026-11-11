@@ -18,7 +18,7 @@ This file holds only the rules and the API behavior that change how code must be
 
 ## Layout
 
-- `main.go` — entry point; wires `signal.NotifyContext(os.Interrupt)` so `Ctrl-C` cancels long-running commands (downloads, uploads).
+- `cmd/pfix/main.go` — canonical entry point (`go install .../cmd/pfix@latest` yields `pfix`). The root `main.go` is a compatibility shim so the module-root `go install` keeps working (as `pfix-cli`). Both only call `cmd.Main()` (`internal/cmd/main.go`), which wires `signal.NotifyContext(os.Interrupt)` so `Ctrl-C` cancels long-running commands (downloads, uploads).
 - `internal/cmd/<resource>/` — one Cobra package per command group (`task`, `project`, `contact`, `user`, `report`, `datatag`, `template`, `customfield`, `object`, `file`, `comment`, `config`, `auth`, `api`), plus `root`, `version`, `ping`. `internal/config` is imported as `pfconfig` inside `internal/cmd/config` to avoid the name collision.
 - `internal/cmd/{processes,groups,files}/` — list commands shared by several parents (e.g. `files.NewCmd(g, files.Options{...})` backs `task|contact|project files`, each registering only the flags its endpoint supports).
 - `internal/cmdutil/` — `GlobalOpts` (persistent flags), `Client()`/`ClientFunc()`, and the resource-agnostic helpers every command reuses (`ValidateID`, `FieldsCSV`, `DecodeJSON`, `ApplyFilter`, `ParsePeople`, `ParseTimePoint`, `DescribeAPIError`, `ParseCustomFieldSpecs`/`BuildCustomFieldData`, `FieldsHelp`, `ScanFileIDs`, `SafeFileName`). Check here before writing a helper.
@@ -74,7 +74,7 @@ Each item below was verified live against the API. These are the traps that shap
 - Format: `gofmt -l .` (must print nothing). Vet: `go vet ./...`.
 - Test: `go test ./...` (CI runs `-race`). Table-driven tests; fake the API with `net/http/httptest`; mock only at the HTTP boundary, never the code under test.
 - Lint (required — CI gates on it): `golangci-lint run ./...` must report `0 issues` before work is done or a release is tagged. `gofmt`/`go vet` are not a substitute — `errcheck` flags unchecked error returns, including in tests. Config in `.golangci.yml`.
-- Build: `go build -o pfix .`; release builds embed metadata via `-ldflags "-X github.com/a68366/pfix-cli/internal/buildinfo.Version=..."` (and `Commit`/`Date`).
+- Build: `go build -o pfix ./cmd/pfix`; release builds embed metadata via `-ldflags "-X github.com/a68366/pfix-cli/internal/buildinfo.Version=..."` (and `Commit`/`Date`).
 - CI: `.github/workflows/ci.yml` runs gofmt/vet/build/`go test -race`/tidy-check/golangci-lint on pushes to `main` and PRs; `.github/workflows/release.yml` + `.goreleaser.yml` publish multi-platform binaries to GitHub Releases on `v*` tags.
 - Releasing: on a green `main`, `git tag -a vX.Y.Z -m "pfix vX.Y.Z" && git push origin vX.Y.Z`. GoReleaser builds linux/darwin/windows × amd64/arm64, writes `checksums.txt`, and publishes the release immediately, with a changelog built from Conventional Commit subjects — `docs`/`test`/`chore`/`ci` are excluded, so a user-visible change needs `feat`/`fix`. Verify the Actions run and the Releases page afterwards.
 

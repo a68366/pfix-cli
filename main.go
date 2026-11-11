@@ -1,19 +1,11 @@
+// Command pfix-cli is a compatibility entry point at the module root. It keeps
+// `go install github.com/a68366/pfix-cli@latest` working, though that names
+// the binary pfix-cli; the canonical entry point is ./cmd/pfix, which installs
+// as pfix.
 package main
 
-import (
-	"context"
-	"fmt"
-	"os"
-	"os/signal"
-
-	"github.com/a68366/pfix-cli/internal/cmd"
-)
+import "github.com/a68366/pfix-cli/internal/cmd"
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
-	if err := cmd.Execute(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, "pfix:", err)
-		os.Exit(1)
-	}
+	cmd.Main()
 }
