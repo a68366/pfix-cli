@@ -465,11 +465,11 @@ pfix honors the standard proxy environment variables for every command: `HTTPS_P
 ## Development
 
 ```sh
-go test ./...        # run the test suite
-go vet ./...         # static analysis
-gofmt -l .           # formatting check (prints nothing when clean)
-go build -o pfix ./cmd/pfix   # build the binary
-golangci-lint run    # lint — required, CI gates on it
+go test ./...                # run the test suite
+go vet ./...                 # static analysis
+gofmt -l .                   # formatting check (prints nothing when clean)
+go build -o pfix ./cmd/pfix  # build the binary
+golangci-lint run            # lint — required, CI gates on it
 ```
 
 See [`AGENTS.md`](AGENTS.md) for architecture and conventions.
