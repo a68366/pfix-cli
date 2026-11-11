@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -183,5 +184,97 @@ func TestBuildCustomFieldDataRejectsUnknownOption(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), `"1", "2", "3", "four"`) {
 		t.Errorf("err = %v, want it to list the valid options", err)
+	}
+}
+
+// An empty value (`--cf <id>=`) clears the field; the clearing marker depends on
+// the field's type code: null for scalars and single references, [] for sets,
+// false for a checkbox. Computed and unclassified types refuse.
+func TestFormatCFClear(t *testing.T) {
+	tests := []struct {
+		name    string
+		def     customFieldDef
+		want    any
+		wantErr string
+	}{
+		{name: "short text", def: customFieldDef{Type: 0}, want: nil},
+		{name: "number", def: customFieldDef{Type: 1}, want: nil},
+		{name: "multiline", def: customFieldDef{Type: 2}, want: nil},
+		{name: "date", def: customFieldDef{Type: 3}, want: nil},
+		{name: "time", def: customFieldDef{Type: 4}, want: nil},
+		{name: "date and time", def: customFieldDef{Type: 5}, want: nil},
+		{name: "period", def: customFieldDef{Type: 6}, want: nil},
+		{name: "checkbox", def: customFieldDef{Type: 7}, want: false},
+		{name: "list", def: listDef, want: nil},
+		// A list with no options can still be cleared — there is no label to check.
+		{name: "list without options", def: customFieldDef{Type: 8}, want: nil},
+		{name: "directory entry", def: customFieldDef{Type: 9}, want: nil},
+		{name: "contact", def: customFieldDef{Type: 10}, want: nil},
+		{name: "employee", def: customFieldDef{Type: 11}, want: nil},
+		{name: "counterparty", def: customFieldDef{Type: 12}, want: nil},
+		{name: "group employee or contact", def: customFieldDef{Type: 13}, want: nil},
+		{name: "list of users", def: customFieldDef{Type: 14}, want: []any{}},
+		{name: "set of directory values", def: customFieldDef{Type: 15}, want: []any{}},
+		{name: "task", def: customFieldDef{Type: 16}, want: nil},
+		{name: "task set", def: customFieldDef{Type: 17}, want: []any{}},
+		{name: "set of values", def: customFieldDef{Type: 20}, want: []any{}},
+		{name: "files", def: customFieldDef{Type: 21}, want: []any{}},
+		{name: "project", def: customFieldDef{Type: 22}, want: nil},
+		{name: "location", def: customFieldDef{Type: 25}, want: nil},
+		{name: "calculated", def: customFieldDef{Type: 24}, wantErr: "cannot clear custom field 7"},
+		{name: "date with time frame", def: customFieldDef{Type: 28}, wantErr: "pfix api"},
+		{name: "unknown code", def: customFieldDef{Type: 99}, wantErr: "type 99"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.def.ID = 7
+			got, err := formatCF(CustomFieldSpec{ID: 7, Value: ""}, tt.def)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("err = %v, want it to contain %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			want := map[string]any{"field": map[string]any{"id": 7}, "value": tt.want}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("got %#v, want %#v", got, want)
+			}
+		})
+	}
+}
+
+// The clearing markers must survive JSON encoding as the literal null / [] /
+// false the API expects — a dropped "value" key would leave the field as is.
+func TestBuildCustomFieldDataClearEncoding(t *testing.T) {
+	c := cfTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"result":"success","customfields":[
+			{"id":1,"type":0},{"id":2,"type":14},{"id":3,"type":7},{"id":4,"type":1}]}`)
+	})
+	specs := []CustomFieldSpec{{ID: 1, Value: ""}, {ID: 2, Value: ""}, {ID: 3, Value: ""}, {ID: 4, Value: "5"}}
+	got, err := BuildCustomFieldData(context.Background(), c, "task", specs)
+	if err != nil {
+		t.Fatalf("BuildCustomFieldData: %v", err)
+	}
+	b, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	want := `[{"field":{"id":1},"value":null},{"field":{"id":2},"value":[]},` +
+		`{"field":{"id":3},"value":false},{"field":{"id":4},"value":5}]`
+	if string(b) != want {
+		t.Errorf("body = %s, want %s", b, want)
+	}
+}
+
+func TestClearedCustomField(t *testing.T) {
+	if _, ok := ClearedCustomField([]CustomFieldSpec{{ID: 1, Value: "x"}}); ok {
+		t.Error("a set-only spec list reports no clear")
+	}
+	id, ok := ClearedCustomField([]CustomFieldSpec{{ID: 1, Value: "x"}, {ID: 2, Value: ""}})
+	if !ok || id != 2 {
+		t.Errorf("got (%d, %v), want the clearing spec's id 2", id, ok)
 	}
 }

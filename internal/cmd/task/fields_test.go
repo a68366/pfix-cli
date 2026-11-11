@@ -220,6 +220,14 @@ func TestTaskFieldsRegister(t *testing.T) {
 			t.Errorf("flag --%s not registered with withTemplate=false", name)
 		}
 	}
+
+	// Only update can clear a custom field, so only its --cf help says how.
+	if u := withoutTemplate.Flags().Lookup("cf").Usage; !strings.Contains(u, "clears the field") {
+		t.Errorf("update --cf help = %q, want it to explain clearing", u)
+	}
+	if u := withTemplate.Flags().Lookup("cf").Usage; strings.Contains(u, "clears") {
+		t.Errorf("create --cf help = %q, must not offer clearing", u)
+	}
 }
 
 func TestApplyStatusZeroAllowed(t *testing.T) {

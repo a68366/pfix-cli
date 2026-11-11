@@ -45,7 +45,7 @@ Each item below was verified live against the API. These are the traps that shap
 **Silent acceptance.** Many writes answer `success` while discarding or mangling input:
 - Unknown `fields` names are ignored, so `--fields` help is advisory. Unknown keys in a checklist or file write *body*, by contrast, are rejected (`code 30`, *Cannot deserialize*).
 - An invalid task `priority` is reset to `NotUrgent` — pfix validates it.
-- A custom-field list value outside its `enumValues` is stored verbatim as a phantom option — pfix checks labels exactly (no trimming or case folding). A custom field not bound to the task's template/process is dropped silently (documented, not detectable).
+- A custom-field list value outside its `enumValues` is stored verbatim as a phantom option — pfix checks labels exactly (no trimming or case folding). A custom field not bound to the task's template/process is refused with `code 6` (*Custom field not permitted by id*) on create and update, set or clear alike — but it has also been seen dropped silently, so verify by reading back. Binding a field to a template is not possible over REST (fields and field sets can be created, but templates are read-only), so set/clear round-trips cannot be exercised on an account without pre-bound fields. `--cf <id>=` clears with the spec's per-type marker (`null`/`[]`/`false`); computed and unlisted type codes are refused.
 - An unresolvable people reference (e.g. checklist `assignees`) is dropped; since lists are replaced wholesale, a bad reference clears the list.
 - A task's `isDeleted` is read-only; writing it is dropped.
 - `--from-url` stores whatever the URL returns, a 404 page included.

@@ -71,6 +71,9 @@ func createBody(name, description string, f *taskFields, changed func(string) bo
 }
 
 func runCreate(ctx context.Context, o *createOptions) error {
+	if id, ok := cmdutil.ClearedCustomField(o.cfSpecs); ok {
+		return fmt.Errorf("--cf %d= clears a field, and a new task has nothing to clear; give it a value, or clear it later with 'pfix task update'", id)
+	}
 	client, err := o.client()
 	if err != nil {
 		return err
