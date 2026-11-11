@@ -54,6 +54,22 @@ func TestRunFiltersJSON(t *testing.T) {
 	}
 }
 
+func TestRunFiltersJQ(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"result":"success","filters":[{"id":":all","name":"All"},{"id":"7","name":"Mine"}]}`)
+	}))
+	defer srv.Close()
+
+	out := &strings.Builder{}
+	o := &filtersOptions{json: true, jq: ".filters[].name", client: fakeClient(srv.URL), out: out}
+	if err := runFilters(context.Background(), o); err != nil {
+		t.Fatalf("runFilters: %v", err)
+	}
+	if got, want := out.String(), "All\nMine\n"; got != want {
+		t.Errorf("--jq output = %q, want %q", got, want)
+	}
+}
+
 func TestRunFiltersQuiet(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, `{"result":"success","filters":[{"id":":in","name":"Incoming"}]}`)

@@ -12,7 +12,7 @@ gofmt -l .           # must print nothing
 go vet ./...
 go test ./...
 go mod tidy          # must leave go.mod / go.sum unchanged
-golangci-lint run    # optional locally; CI runs it
+golangci-lint run    # must report 0 issues; CI gates on it
 ```
 
 Ground rules:

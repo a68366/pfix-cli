@@ -20,6 +20,7 @@ var filtersColumns = []output.Column{
 type filtersOptions struct {
 	json   bool
 	quiet  bool
+	jq     string
 	client func() (*planfix.Client, error)
 	out    io.Writer
 }
@@ -35,6 +36,7 @@ func newFiltersCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			o.json = g.JSON
 			o.quiet = g.Quiet
+			o.jq = g.JQ
 			o.client = g.ClientFunc()
 			o.out = cmd.OutOrStdout()
 			return runFilters(cmd.Context(), o)
@@ -53,7 +55,7 @@ func runFilters(ctx context.Context, o *filtersOptions) error {
 		return err
 	}
 	if o.json {
-		return output.JSON(o.out, raw)
+		return output.EmitJSON(o.out, raw, o.jq)
 	}
 	var env struct {
 		Filters []map[string]any `json:"filters"`
