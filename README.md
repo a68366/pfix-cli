@@ -83,7 +83,7 @@ typed command:
 | `--json` | Emit the raw Planfix API response (pretty-printed) instead of a table — the machine-readable path |
 | `--jq '<expr>'` | Filter the JSON output through a jq expression, one result per line (implies `--json`) |
 | `--fields a,b,c` | Override which Planfix fields are requested and shown as columns (defaults are per-command) |
-| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`, `comment add`/`edit`/`delete`, `checklist add`/`update`/`delete`) |
+| `-q, --quiet` | Drop the table header (lists), or print only the affected id (`create`/`update`/`delete`, `contact restore`, `comment add`/`edit`/`delete`, `checklist add`/`update`/`delete`) |
 
 **Reshaping JSON with `--jq`.** `--jq` runs a jq expression over the same JSON
 `--json` would print, so you don't need to pass both. A result that is a bare
@@ -151,6 +151,10 @@ pfix task create --name "Quick task" -q     # prints just the id
 pfix task update 17 --status 2
 pfix task update 17 --name "Renamed" --description "new body"
 pfix task update 17 --assignees user:1 --priority Urgent --start-date "2026-07-08 10:00"
+
+# Delete a task — requires --force and cannot be undone. Its checklist goes with it;
+# its subtasks do NOT (they become top-level tasks); comments and files stay.
+pfix task delete 17 --force
 
 # Set custom fields (id is the numeric custom-field id; repeatable)
 pfix task create --template 6 --name "Lead" --cf 88206=hello --cf 85984=42
@@ -299,6 +303,8 @@ pfix contact processes                              # list contact processes (ID
 pfix contact groups                                 # contact groups — how the base is segmented (ID / NAME)
 pfix contact create --name "Ada" --lastname "Lovelace" --template 1 --email ada@example.com
 pfix contact update 42 --email new@example.com --lastname "Byron"
+pfix contact delete 42 --force                      # moves it to the trash (requires --force)
+pfix contact restore 42                             # brings it back intact, same id
 ```
 
 ### Users

@@ -21,6 +21,6 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		"such as customers, partners or suppliers. These are not the group:N\n" +
 		"references accepted by --assignees/--auditors/--participants; those are\n" +
 		"user groups (see 'pfix user groups').")
-	cmd.AddCommand(newListCmd(g), newViewCmd(g), newCreateCmd(g), newUpdateCmd(g), processes.NewCmd(g, "contact"), cg, files.NewCmd(g, files.Options{Type: "contact", DescriptionOnly: true}))
+	cmd.AddCommand(newListCmd(g), newViewCmd(g), newCreateCmd(g), newUpdateCmd(g), newDeleteCmd(g), newRestoreCmd(g), processes.NewCmd(g, "contact"), cg, files.NewCmd(g, files.Options{Type: "contact", DescriptionOnly: true}))
 	return cmd
 }
