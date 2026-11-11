@@ -103,7 +103,7 @@ func runEdit(ctx context.Context, o *editOptions, idStr string) error {
 	}
 	raw, err := client.JSON(ctx, "POST", path, o.body)
 	if err != nil {
-		return cmdutil.DescribeAPIError(err)
+		return err
 	}
 	if o.json {
 		return output.EmitJSON(o.out, raw, o.jq)
@@ -128,7 +128,7 @@ func runEdit(ctx context.Context, o *editOptions, idStr string) error {
 func resolveParent(ctx context.Context, client *planfix.Client, id int) (string, error) {
 	raw, err := client.JSON(ctx, "GET", "comment/"+strconv.Itoa(id)+"?fields=task,contact", nil)
 	if err != nil {
-		return "", cmdutil.DescribeAPIError(err)
+		return "", err
 	}
 	var env struct {
 		Comment map[string]any `json:"comment"`

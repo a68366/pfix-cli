@@ -69,7 +69,7 @@ func runView(ctx context.Context, o *viewOptions, idStr string) error {
 	path := "comment/" + strconv.Itoa(id) + "?fields=" + url.QueryEscape(fields)
 	raw, err := client.JSON(ctx, "GET", path, nil)
 	if err != nil {
-		return cmdutil.DescribeAPIError(err)
+		return err
 	}
 	if o.json {
 		return output.EmitJSON(o.out, raw, o.jq)

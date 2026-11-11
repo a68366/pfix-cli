@@ -121,9 +121,10 @@ func TestRunChecklistDeleteAPIErrors(t *testing.T) {
 			reject: []string{"already deleted", "checklist list"},
 		},
 		{
-			name: "scope denied keeps the shared auth hint",
-			body: `{"result":"fail","code":5,"error":"Access denied"}`,
-			want: []string{"lacks the scope"},
+			name:   "scope denied passes through for the root to describe",
+			body:   `{"result":"fail","code":5,"error":"Access denied"}`,
+			want:   []string{"Access denied"},
+			reject: []string{"already deleted", "checklist list"},
 		},
 	}
 	for _, tt := range tests {

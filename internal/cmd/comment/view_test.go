@@ -120,7 +120,7 @@ func TestViewJSON(t *testing.T) {
 	}
 }
 
-// TestViewUnknownIDReturnsAPIMessage pins the cmdutil.DescribeAPIError wiring:
+// TestViewUnknownIDReturnsAPIMessage pins the error path:
 // an unrecognized comment id (app code 5000) must surface the API's own
 // message, not a generic error.
 func TestViewUnknownIDReturnsAPIMessage(t *testing.T) {

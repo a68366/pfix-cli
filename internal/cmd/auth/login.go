@@ -90,7 +90,9 @@ func runLogin(ctx context.Context, o loginOptions) error {
 	}
 
 	if err := o.validate(ctx, domain, token); err != nil {
-		return fmt.Errorf("credential check failed: %w", err)
+		// The rejected token is the one just typed, not the profile's, so the
+		// root's "run `pfix auth login`" hint would only point back here.
+		return cmdutil.WithoutAuthHint(fmt.Errorf("credential check failed: %w", err))
 	}
 
 	cfg.Profiles[profile] = config.Profile{Domain: domain, Token: token}

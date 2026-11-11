@@ -115,11 +115,13 @@ func run(ctx context.Context, o *options) error {
 	return nil
 }
 
-// Fetch returns the profile behind the client's token.
+// Fetch returns the profile behind the client's token. Its error carries the
+// auth hints itself, because callers print it in place rather than return it
+// to the root, which adds them for returned errors.
 func Fetch(ctx context.Context, client *planfix.Client) (Info, error) {
 	raw, err := get(ctx, client)
 	if err != nil {
-		return Info{}, err
+		return Info{}, cmdutil.DescribeAPIError(err, cmdutil.AuthContext{})
 	}
 	var info Info
 	if err := cmdutil.DecodeJSON(raw, &info); err != nil {
@@ -136,11 +138,12 @@ func get(ctx context.Context, client *planfix.Client) ([]byte, error) {
 	return raw, nil
 }
 
-// describe adds the shared auth hints, then a /userinfo-specific one: the
-// endpoint answers 403 for a login type or profile it does not support.
+// describe adds the /userinfo-specific hint: the endpoint answers 403 for a
+// login type or profile it does not support. An auth failure is returned as
+// is, so the shared auth hint (added by the root, or by Fetch) is the only one.
 func describe(err error) error {
-	if d := cmdutil.DescribeAPIError(err); d != err {
-		return d
+	if cmdutil.DescribeAPIError(err, cmdutil.AuthContext{}) != err {
+		return err
 	}
 	var apiErr *planfix.APIError
 	if errors.As(err, &apiErr) && apiErr.StatusCode == 403 {

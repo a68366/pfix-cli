@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/time/rate"
 
+	"github.com/a68366/pfix-cli/internal/cmdutil"
 	"github.com/a68366/pfix-cli/internal/planfix"
 )
 
@@ -121,15 +122,20 @@ func TestRunWhoamiJSON(t *testing.T) {
 	}
 }
 
+// TestRunWhoamiErrors runs each error through the root's description too
+// (cmdutil.DescribeAPIError), since that is what the user sees: the /userinfo
+// 403 hint and the shared auth hints must each appear once, never together.
 func TestRunWhoamiErrors(t *testing.T) {
 	tests := []struct {
 		name   string
 		status int
 		body   string
-		want   string
+		want   []string
+		reject []string
 	}{
-		{name: "unsupported login type", status: 403, body: `{"result":"fail","code":0,"error":"Not supported"}`, want: "login type"},
-		{name: "unknown token", status: 401, body: `{"result":"fail","code":1,"error":"Access denied, unknown token"}`, want: "auth login"},
+		{name: "unsupported login type", status: 403, body: `{"result":"fail","code":0,"error":"Not supported"}`, want: []string{"Not supported — the API does not support this login type"}, reject: []string{"auth login", "scope"}},
+		{name: "unknown token", status: 401, body: `{"result":"fail","code":1,"error":"Access denied, unknown token"}`, want: []string{"Access denied, unknown token — the token was rejected; run `pfix auth login --profile test`"}, reject: []string{"login type"}},
+		{name: "scope denied on 403 gets no login-type hint", status: 403, body: `{"result":"fail","code":5,"error":"Scope denied"}`, want: []string{"Scope denied — the token is valid but lacks the scope"}, reject: []string{"login type"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -138,8 +144,19 @@ func TestRunWhoamiErrors(t *testing.T) {
 			if err == nil {
 				t.Fatal("expected an error")
 			}
-			if !strings.Contains(err.Error(), tt.want) {
-				t.Errorf("error = %v, want it to contain %q", err, tt.want)
+			msg := cmdutil.DescribeAPIError(err, cmdutil.AuthContext{Profile: "test"}).Error()
+			for _, w := range tt.want {
+				if !strings.Contains(msg, w) {
+					t.Errorf("error = %q, want it to contain %q", msg, w)
+				}
+			}
+			for _, r := range tt.reject {
+				if strings.Contains(msg, r) {
+					t.Errorf("error = %q, must not contain %q", msg, r)
+				}
+			}
+			if n := strings.Count(msg, " — "); n != 1 {
+				t.Errorf("error = %q carries %d hints, want 1", msg, n)
 			}
 			var apiErr *planfix.APIError
 			if !errors.As(err, &apiErr) {

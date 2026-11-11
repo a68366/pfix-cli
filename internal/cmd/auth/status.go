@@ -56,7 +56,7 @@ func runStatus(ctx context.Context, o *statusOptions) error {
 		return err
 	}
 	if _, err := client.JSON(ctx, "GET", "ping", nil); err != nil {
-		return cmdutil.DescribeAPIError(err)
+		return err
 	}
 	fmt.Fprintln(o.out, "Status:  valid")
 

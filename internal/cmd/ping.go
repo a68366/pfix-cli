@@ -49,7 +49,7 @@ func runPing(ctx context.Context, o *pingOptions) error {
 	}
 	raw, err := client.JSON(ctx, "GET", "ping", nil)
 	if err != nil {
-		return cmdutil.DescribeAPIError(err)
+		return err
 	}
 	if o.quiet {
 		return nil
