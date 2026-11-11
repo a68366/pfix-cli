@@ -62,7 +62,8 @@ func runCreate(ctx context.Context, o *createOptions) error {
 	if err != nil {
 		return err
 	}
-	raw, err := client.JSON(ctx, "POST", "contact/", body)
+	// A create is sent once: a retry could create a duplicate contact.
+	raw, err := client.JSONOnce(ctx, "POST", "contact/", body)
 	if err != nil {
 		return err
 	}

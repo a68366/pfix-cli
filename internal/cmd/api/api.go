@@ -42,7 +42,10 @@ func NewCmd(g *cmdutil.GlobalOpts) *cobra.Command {
 		Short: "Make an authenticated request to any Planfix REST endpoint",
 		Long: "Make an authenticated request to any Planfix REST endpoint and print the response.\n\n" +
 			"The default method is GET, or POST when a body or fields are supplied. Use --input to send a\n" +
-			"raw JSON body (the primary path for nested Planfix requests), or -F/-f to set simple parameters.",
+			"raw JSON body (the primary path for nested Planfix requests), or -F/-f to set simple parameters.\n\n" +
+			"GET, HEAD and OPTIONS requests are retried on a connection error or 5xx response. Every other\n" +
+			"method (POST, PUT, DELETE, ...) is sent exactly once, even when it only reads, because a\n" +
+			"repeated write could create a duplicate or report a completed delete as a failure.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			o.methodSet = cmd.Flags().Changed("method")
@@ -108,7 +111,11 @@ func runAPI(ctx context.Context, o *apiOptions, path string) error {
 		return err
 	}
 
-	resp, err := client.Do(ctx, method, path, body, headers)
+	send := client.DoOnce
+	if retrySafe(method) {
+		send = client.Do
+	}
+	resp, err := send(ctx, method, path, body, headers)
 	if err != nil {
 		return err
 	}
@@ -133,6 +140,19 @@ func runAPI(ctx context.Context, o *apiOptions, path string) error {
 		return planfix.ParseError(resp.StatusCode, data)
 	}
 	return nil
+}
+
+// retrySafe reports whether a raw request may be retried on a connection error
+// or 5xx. Only the read-only HTTP methods qualify. Every other method is sent
+// once — including the API's POST list/read endpoints, since a raw path alone
+// does not reliably say whether a POST creates something, and a duplicated
+// create is worse than one failed read the caller can rerun.
+func retrySafe(method string) bool {
+	switch strings.ToUpper(method) {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return true
+	}
+	return false
 }
 
 func parseFields(typed, raw []string, stdin io.Reader) (map[string]any, error) {

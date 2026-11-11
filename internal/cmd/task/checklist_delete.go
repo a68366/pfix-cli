@@ -62,7 +62,9 @@ func runChecklistDelete(ctx context.Context, o *checklistDeleteOptions, taskArg,
 	if err != nil {
 		return err
 	}
-	raw, err := client.JSON(ctx, http.MethodDelete, checklistItemPath(taskID, itemID), nil)
+	// Sent once: a retry after a delete the server already carried out would
+	// answer an error and misreport the outcome.
+	raw, err := client.JSONOnce(ctx, http.MethodDelete, checklistItemPath(taskID, itemID), nil)
 	if err != nil {
 		return describeChecklistDeleteError(err)
 	}

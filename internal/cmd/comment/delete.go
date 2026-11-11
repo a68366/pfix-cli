@@ -59,7 +59,9 @@ func runDelete(ctx context.Context, o *deleteOptions, idStr string) error {
 	if err != nil {
 		return err
 	}
-	raw, err := client.JSON(ctx, "DELETE", "comment/"+strconv.Itoa(id), nil)
+	// Sent once: a repeated delete of a (soft-)deleted comment answers an
+	// error, so a retry would misreport a delete that succeeded.
+	raw, err := client.JSONOnce(ctx, http.MethodDelete, "comment/"+strconv.Itoa(id), nil)
 	if err != nil {
 		return describeDeleteError(err)
 	}

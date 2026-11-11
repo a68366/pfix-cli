@@ -86,6 +86,13 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte, heade
 	return c.do(ctx, method, path, body, headers, c.HTTP)
 }
 
+// DoOnce is Do with exactly one attempt: a connection error or 5xx response is
+// returned rather than retried. Use it for non-idempotent writes, where a retry
+// could repeat a request the server already acted on.
+func (c *Client) DoOnce(ctx context.Context, method, path string, body []byte, headers map[string]string) (*http.Response, error) {
+	return c.attempt(ctx, method, path, body, headers, c.HTTP, 1)
+}
+
 // Stream sends an authenticated GET and returns the response with its Body
 // unread; the caller must close it. Unlike Do/JSON it runs against a client
 // with no whole-request timeout (only a 30s response-header timeout), so
